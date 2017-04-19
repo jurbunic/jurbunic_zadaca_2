@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+    <f:view locale="#{lokalizator.odabraniJezik}">
+        <h:head>
+            <title>#{m.slanjePoruke_naslov}</title>
+        </h:head>
+        <h:body>
+            <h:form>
+                <h:outputLabel value="#{m.slanjePoruke_salje}"/>: 
+                <h:inputText value="#{slanjePoruke.salje}"/><br/>
+                <h:outputLabel value="Prima"/>: 
+                <h:inputText value="#{slanjePoruke.prima}"/><br/>
+                <h:outputLabel value="Predmett"/>: 
+                <h:inputText value="#{slanjePoruke.predmet}"/><br/>
+                <h:outputLabel value="Sadržaj"/>: 
+                <h:inputTextarea value="#{slanjePoruke.sadrzaj}" cols="60" rows="10"/><br/>
+                <h:commandButton value=" Šalji poruku " action="#{slanjePoruke.saljiPoruku()}"/>   <br/>
+
+                <h:commandLink value="Izbor jezika" action="#{slanjePoruke.promjenaJezika()}"/> <br/>
+                <h:commandLink value="Pregled poruka" action="#{slanjePoruke.pregledPoruka()}"/>
+            </h:form>
+        </h:body>
+    </f:view>
+</html>
+

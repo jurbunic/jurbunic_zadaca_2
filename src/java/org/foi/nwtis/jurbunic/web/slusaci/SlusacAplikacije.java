@@ -35,14 +35,15 @@ public class SlusacAplikacije implements ServletContextListener {
 
         BP_Konfiguracija bpkonf = new BP_Konfiguracija(datoteka);
         sce.getServletContext().setAttribute("BP_Konfig", bpkonf);
-
         Konfiguracija konf = null;
         try {
             konf = KonfiguracijaApstraktna.preuzmiKonfiguraciju(datoteka);
-            sce.getServletContext().setAttribute("Mail_Konfig", konf);
-        } catch (NemaKonfiguracije | NeispravnaKonfiguracija ex) {
+        } catch (NemaKonfiguracije ex) {
+            Logger.getLogger(SlusacAplikacije.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NeispravnaKonfiguracija ex) {
             Logger.getLogger(SlusacAplikacije.class.getName()).log(Level.SEVERE, null, ex);
         }
+        sce.getServletContext().setAttribute("Mail_Konfig", konf);
         op = new ObradaPoruka();
         op.setSc(sce.getServletContext());
         op.start();
