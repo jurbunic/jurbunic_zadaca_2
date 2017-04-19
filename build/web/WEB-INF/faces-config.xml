@@ -23,7 +23,6 @@
             <from-outcome>PromjenaJezika</from-outcome>
             <to-view-id>index.xhtml</to-view-id>
         </navigation-case>
-<<<<<<< HEAD
         <navigation-case>
             <from-action>#{lokalizator.saljiPoruku()}</from-action>
             <from-outcome>saljiPoruku</from-outcome>
@@ -91,7 +90,5 @@
             <from-outcome>SljedecePoruke</from-outcome>
             <to-view-id>pregledPoruka.xhtml</to-view-id>
         </navigation-case>
-=======
->>>>>>> origin/master
     </navigation-rule>
 </faces-config>
