@@ -2,11 +2,8 @@
 # To change this template file, choose Tools | Templates
 # and open the template in the editor.
 
-<<<<<<< HEAD:src/java/org/foi/nwtis/jurbunic/i18n_en.properties
 pregledPoruka_naslov=Pregled poruka
-=======
->>>>>>> origin/master:src/java/org/foi/nwtis/jurbunic/i18n_en.properties
-pregledPoruka_promjenaJezika=Promjena jezika2
+pregledPoruka_promjenaJezika=Promjena jezika
 pregledPoruka_slanjeEmailPoruke=Slanje email poruke
 pregledPoruka_odaberiMapu=Odaberi mapu
 pregledPoruka_gumbPromjeniMapu=Promjeni mapu
@@ -16,18 +13,14 @@ pregledPoruka_ukupnoPoruka=Ukupno poruka
 pregledPoruka_gumbPrethodnePoruke=Prethodne
 pregledPoruka_gumbSljedecePoruke=Sljedece
 
-index_naslov=Change language
-index_promjena=Change
-index_pregledPoruka=View emails
-<<<<<<< HEAD:src/java/org/foi/nwtis/jurbunic/i18n_en.properties
-index_saljiPoruku=Send mail
+index_naslov=Promjena jezika
+index_promjena=Promjeni
+index_pregledPoruka=Pregled poruka
+index_saljiPoruku=\u0160alji poruku
 
-slanjePoruke_naslov=Send mail
+slanjePoruke_naslov=Slanje poruke
 slanjePoruke_salje=\u0160alje
 slanjePoruke_prima=Prima
 slanjePoruke_predmet=Predmet
 slanjePoruke_promjena=Promjeni
 slanjePoruke_pregledPoruka=Pregled poruka
-=======
-index_saljiPoruku=Send mail
->>>>>>> origin/master:src/java/org/foi/nwtis/jurbunic/i18n_en.properties

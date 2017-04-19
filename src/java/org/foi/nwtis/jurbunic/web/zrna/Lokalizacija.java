@@ -40,7 +40,11 @@ public class Lokalizacija implements Serializable {
     public String getOdabraniJezik() {
         UIViewRoot view = FacesContext.getCurrentInstance().getViewRoot();
         if (view == null) {
+<<<<<<< HEAD
             odabraniJezik = "hr";     
+=======
+            odabraniJezik = "hr";
+>>>>>>> origin/master
         } else {
             Locale lokalniJezik = FacesContext.getCurrentInstance().getViewRoot().getLocale();
             odabraniJezik = lokalniJezik.getLanguage();
@@ -62,6 +66,7 @@ public class Lokalizacija implements Serializable {
         setOdabraniJezik(odabraniJezik);
         return "PromjenaJezika";
     }
+<<<<<<< HEAD
     
     public String saljiPoruku(){
         return "saljiPoruku";
@@ -74,4 +79,6 @@ public class Lokalizacija implements Serializable {
     public String pregledPoruka(){
         return "pregledPoruka";
     }
+=======
+>>>>>>> origin/master
 }

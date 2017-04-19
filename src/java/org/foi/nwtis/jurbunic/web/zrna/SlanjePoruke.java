@@ -15,19 +15,26 @@ import javax.enterprise.context.RequestScoped;
 @Named(value = "slanjePoruke")
 @RequestScoped
 public class SlanjePoruke {
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/master
     String posluzitelj;
     String salje;
     String prima;
     String predmet;
     String sadrzaj;
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/master
     /**
      * Creates a new instance of SlanjePoruke
      */
     public SlanjePoruke() {
     }
 
+<<<<<<< HEAD
     public String saljiPoruku() {
         //TODO dodaj ovdje slanje poruke prema primjeru sa predavanja
         this.sadrzaj = "";
@@ -52,6 +59,25 @@ public class SlanjePoruke {
     public String getPrima() {
         return prima;
     }
+=======
+    public String getSalje() {
+        return salje;
+    }
+
+    public void setSalje(String salje) {
+        this.salje = salje;
+    }
+
+    public String getPrima() {
+        return prima;
+    }
+
+    public String saljiPoruku(){
+        //TODO tu smo stali
+        return "PoslanaPoruka";
+    }
+    
+>>>>>>> origin/master
     public void setPrima(String prima) {
         this.prima = prima;
     }
@@ -67,4 +93,9 @@ public class SlanjePoruke {
     public void setSadrzaj(String sadrzaj) {
         this.sadrzaj = sadrzaj;
     }
+<<<<<<< HEAD
+=======
+    
+    
+>>>>>>> origin/master
 }

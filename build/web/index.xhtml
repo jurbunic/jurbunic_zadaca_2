@@ -15,8 +15,13 @@
                                    itemValue="#{j.vrijednost}" />
                     <h:commandButton value="#{m.index_promjena}" action="#{lokalizator.odaberiJezik}" /><br/>
                 </h:selectOneRadio>
+<<<<<<< HEAD
                 <h:commandLink value="#{m.index_saljiPoruku}" action="#{lokalizator.saljiPoruku()}"/><br/>
                 <h:commandLink value="#{m.index_pregledPoruka}" action="#{lokalizator.pregledPoruka()}"/>
+=======
+                <h:outputLink value="saljiPoruku">#{m.index_saljiPoruku}</h:outputLink>
+                <h:outputLink value="pregledPoruka">#{m.index_pregledPoruka}</h:outputLink>
+>>>>>>> origin/master
             </h:form>
         </h:body>
     </f:view>
