@@ -5,6 +5,7 @@
  */
 package org.foi.nwtis.jurbunic.web.dretve;
 
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.Folder;
@@ -25,6 +26,12 @@ public class ObradaPoruka extends Thread {
     private ServletContext sc = null;
     private boolean prekidObrade = false;
 
+    private Session session;
+    private Store store;
+    private Folder folder;
+    private ArrayList<Folder> folders = new ArrayList<>();
+    private Message[] messages;
+
     @Override
     public void interrupt() {
         prekidObrade = true;
@@ -41,31 +48,24 @@ public class ObradaPoruka extends Thread {
         int trajanjeCiklusa = Integer.parseInt(konf.dajPostavku("mail.timeSecThread"));
         int trajanjeObrade = 0;
         // TODO odredi trajanje
-        Session session;
-        Store store;
-        Folder folder;
-        Message[] messages;
-        // TODO dodati ostale parametre!
+        try {
+            // TODO dodati ostale parametre!
+            spajanje(server, port, korisnik, lozinka);
+        } catch (MessagingException ex) {
+            Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        }
         int redniBrojCiklusa = 0;
         while (!prekidObrade) {
             try {
-                //----Citanje poruka----//
-                // Start the session
-                java.util.Properties properties = System.getProperties();
-                properties.put("mail.smtp.host", server);
-                session = Session.getInstance(properties, null);
-
-                // Connect to the store
-                store = session.getStore("imap");
-                store.connect(server, korisnik, lozinka);
-
+                //----Citanje poruka----//                         
                 // Open the INBOX folder
+                
                 folder = store.getFolder("INBOX");
                 folder.open(Folder.READ_ONLY);
-
+                
                 messages = folder.getMessages();
                 for (int i = 0; i < messages.length; ++i) {
-                    
+                    System.out.println(messages[i].getContentType());
                     // TODO dovršiti čitanje, obradu i prebacivanje u mape
                 }
                 redniBrojCiklusa++;
@@ -73,8 +73,6 @@ public class ObradaPoruka extends Thread {
                 //!---Citanje poruka---!//
                 sleep(trajanjeCiklusa * 1000 - trajanjeObrade);
             } catch (InterruptedException ex) {
-                Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (NoSuchProviderException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
             } catch (MessagingException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -90,5 +88,24 @@ public class ObradaPoruka extends Thread {
     public void setSc(ServletContext sc) {
         this.sc = sc;
     }
+
+    private void spajanje(String server, String port, String korisnik, String lozinka) throws MessagingException {
+        // Start the session
+        java.util.Properties properties = System.getProperties();
+        properties.put("mail.smtp.host", server);
+        session = Session.getInstance(properties, null);
+
+        // Connect to the store
+        store = session.getStore("imap");
+        store.connect(server, korisnik, lozinka);
+        
+        folder = store.getFolder("Inbox");        
+        folders.add(folder);
+        folder = store.getFolder("NWTiS_poruke");
+        folders.add(folder);
+        folder = store.getFolder("NWTiS_ostalo");
+        folders.add(folder);
+    }
+    
 
 }
