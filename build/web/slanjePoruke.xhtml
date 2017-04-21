@@ -11,16 +11,16 @@
             <h:form>
                 <h:outputLabel value="#{m.slanjePoruke_salje}"/>: 
                 <h:inputText value="#{slanjePoruke.salje}"/><br/>
-                <h:outputLabel value="Prima"/>: 
+                <h:outputLabel value="#{m.slanjePoruke_prima}"/>: 
                 <h:inputText value="#{slanjePoruke.prima}"/><br/>
-                <h:outputLabel value="Predmett"/>: 
+                <h:outputLabel value="#{m.slanjePoruke_predmet}"/>: 
                 <h:inputText value="#{slanjePoruke.predmet}"/><br/>
-                <h:outputLabel value="Sadržaj"/>: 
+                <h:outputLabel value="#{m.slanjePoruke_sadrzaj}"/>: 
                 <h:inputTextarea value="#{slanjePoruke.sadrzaj}" cols="60" rows="10"/><br/>
-                <h:commandButton value=" Šalji poruku " action="#{slanjePoruke.saljiPoruku()}"/>   <br/>
+                <h:commandButton value="#{m.slanjePoruke_gumbSalji}" action="#{slanjePoruke.saljiPoruku()}"/>   <br/>
 
-                <h:commandLink value="Izbor jezika" action="#{slanjePoruke.promjenaJezika()}"/> <br/>
-                <h:commandLink value="Pregled poruka" action="#{slanjePoruke.pregledPoruka()}"/>
+                <h:commandLink value="#{m.slanjePoruke_promjena}" action="#{slanjePoruke.promjenaJezika()}"/> <br/>
+                <h:commandLink value="#{m.slanjePoruke_pregledPoruka}" action="#{slanjePoruke.pregledPoruka()}"/>
             </h:form>
         </h:body>
     </f:view>

@@ -14,6 +14,8 @@ import javax.mail.MessagingException;
 import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Store;
+import javax.mail.internet.ContentType;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletContext;
 import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
 
@@ -59,13 +61,17 @@ public class ObradaPoruka extends Thread {
             try {
                 //----Citanje poruka----//                         
                 // Open the INBOX folder
-                
+
                 folder = store.getFolder("INBOX");
                 folder.open(Folder.READ_ONLY);
-                
                 messages = folder.getMessages();
                 for (int i = 0; i < messages.length; ++i) {
-                    System.out.println(messages[i].getContentType());
+                    MimeMessage message = (MimeMessage) messages[i];
+                    if(message.getSubject().compareTo("NWTiS_poruke")==1){
+                        folders.get(1).open(Folder.READ_WRITE);
+                        
+                    }
+                    ContentType ct = new ContentType(message.getContentType());
                     // TODO dovršiti čitanje, obradu i prebacivanje u mape
                 }
                 redniBrojCiklusa++;
@@ -99,13 +105,12 @@ public class ObradaPoruka extends Thread {
         store = session.getStore("imap");
         store.connect(server, korisnik, lozinka);
         
-        folder = store.getFolder("Inbox");        
-        folders.add(folder);
-        folder = store.getFolder("NWTiS_poruke");
-        folders.add(folder);
-        folder = store.getFolder("NWTiS_ostalo");
-        folders.add(folder);
+        Folder folder = store.getFolder("NWTiS_poruke");
+        if(!folder.exists()){
+            folder.create(Folder.HOLDS_MESSAGES);
+        }
+        System.out.println(folder.getFullName());
+        
     }
-    
 
 }

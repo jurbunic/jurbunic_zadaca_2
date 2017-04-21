@@ -25,7 +25,7 @@ public class Lokalizacija implements Serializable {
     static final ArrayList<Izbornik> izbornikJezika = new ArrayList<>();
     String odabraniJezik;
 
-    static {
+    static {        
         izbornikJezika.add(new Izbornik("hrvatski", "hr"));
         izbornikJezika.add(new Izbornik("engleski", "en"));
         izbornikJezika.add(new Izbornik("njemački", "de"));
@@ -39,9 +39,7 @@ public class Lokalizacija implements Serializable {
 
     public String getOdabraniJezik() {
         UIViewRoot view = FacesContext.getCurrentInstance().getViewRoot();
-        if (view == null) {
-            odabraniJezik = "hr";     
-        } else {
+        if (view != null) {
             Locale lokalniJezik = FacesContext.getCurrentInstance().getViewRoot().getLocale();
             odabraniJezik = lokalniJezik.getLanguage();
         }
