@@ -5,7 +5,6 @@
  */
 package org.foi.nwtis.jurbunic.web.zrna;
 
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
@@ -15,13 +14,10 @@ import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
-import javax.mail.Store;
 import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
-import org.foi.nwtis.jurbunic.konfiguracije.KonfiguracijaApstraktna;
 
 /**
  *

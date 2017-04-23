@@ -11,7 +11,6 @@ import java.util.logging.Logger;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.internet.ContentType;
@@ -31,8 +30,10 @@ public class ObradaPoruka extends Thread {
     private Session session;
     private Store store;
     private Folder folder;
-    private ArrayList<Folder> folders = new ArrayList<>();
     private Message[] messages;
+
+    private ArrayList<Message> zaNWTiS_poruke = new ArrayList<>();
+    private ArrayList<Message> zaNWTiS_ostalo = new ArrayList<>();
 
     @Override
     public void interrupt() {
@@ -64,17 +65,34 @@ public class ObradaPoruka extends Thread {
 
                 folder = store.getFolder("INBOX");
                 folder.open(Folder.READ_ONLY);
-                messages = folder.getMessages();
-                for (int i = 0; i < messages.length; ++i) {
-                    MimeMessage message = (MimeMessage) messages[i];
-                    if(message.getSubject().compareTo("NWTiS_poruke")==1){
-                        folders.get(1).open(Folder.READ_WRITE);
-                        
+                if (folder.hasNewMessages()) {
+                    messages = folder.getMessages();                
+                    for (int i = 0; i < messages.length; ++i) {
+                        MimeMessage message = (MimeMessage) messages[i];
+                        if (message.getSubject().compareTo("NWTiS_poruke") == 0) {
+                            Message[] poruka = new Message[1];
+                            poruka[0] = messages[i];
+                            store.getFolder("NWTiS_poruke").appendMessages(poruka);
+                            //zaNWTiS_poruke.add(messages[i]);
+                        }
+                        if (message.getSubject().compareTo("NWTiS_ostalo") == 0) {
+                            //zaNWTiS_ostalo.add(messages[i]);
+                        }
+                        ContentType ct = new ContentType(message.getContentType());
+                        // TODO dovršiti čitanje, obradu i prebacivanje u mape
                     }
-                    ContentType ct = new ContentType(message.getContentType());
-                    // TODO dovršiti čitanje, obradu i prebacivanje u mape
                 }
+
+                //System.out.println(zaNWTiS_poruke.size());
+                //Message[] porukeNWTiS_poruke = new Message[zaNWTiS_poruke.size()];
+                //porukeNWTiS_poruke = zaNWTiS_poruke.toArray(porukeNWTiS_poruke);
+                //for(Message m:porukeNWTiS_poruke){
+                //    System.out.println(m.getSubject());
+                //}
+                //folder = store.getFolder("NWTiS_poruke");
+                //folder.appendMessages(porukeNWTiS_poruke);
                 redniBrojCiklusa++;
+                //System.out.println("Broj u NWTiS_poruke:" + folder.getFullName()+":::"+folder.getMessageCount());
                 System.out.println("ObradaPoruka" + redniBrojCiklusa);
                 //!---Citanje poruka---!//
                 sleep(trajanjeCiklusa * 1000 - trajanjeObrade);
@@ -100,17 +118,18 @@ public class ObradaPoruka extends Thread {
         java.util.Properties properties = System.getProperties();
         properties.put("mail.smtp.host", server);
         session = Session.getInstance(properties, null);
-
         // Connect to the store
         store = session.getStore("imap");
         store.connect(server, korisnik, lozinka);
-        
-        Folder folder = store.getFolder("NWTiS_poruke");
-        if(!folder.exists()){
+
+        if (!store.getFolder("NWTiS_poruke").exists()) {
+            folder = store.getFolder("NWTiS_poruke");
             folder.create(Folder.HOLDS_MESSAGES);
         }
-        System.out.println(folder.getFullName());
-        
+        if (!store.getFolder("NWTiS_ostalo").exists()) {
+            folder = store.getFolder("NWTiS_ostalo");
+            folder.create(Folder.HOLDS_MESSAGES);
+        }
     }
 
 }
