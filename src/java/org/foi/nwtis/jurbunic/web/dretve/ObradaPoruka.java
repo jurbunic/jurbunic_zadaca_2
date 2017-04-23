@@ -5,9 +5,12 @@
  */
 package org.foi.nwtis.jurbunic.web.dretve;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -23,6 +26,12 @@ import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
  * @author grupa_1
  */
 public class ObradaPoruka extends Thread {
+
+    //-----------REGEKSI----------------
+    final String regexADD = "^ADD IoT ([1-6]) \"([^\\\\s]+)\" GPS: ([0-9]{1,3}.[0-9]{6}), ([0-9]{1,3}.[0-9]{6});$";
+    final String regexTEMP = "^TEMP IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) C:([0-9]{1,2})[.][0-9];$";
+    final String regexEVENT = "^EVENT IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) F:([0-9]{1,2});$";
+    //----------------------------------
 
     private ServletContext sc = null;
     private boolean prekidObrade = false;
@@ -66,19 +75,29 @@ public class ObradaPoruka extends Thread {
                 folder = store.getFolder("INBOX");
                 folder.open(Folder.READ_ONLY);
                 if (folder.hasNewMessages()) {
-                    messages = folder.getMessages();                
+                    messages = folder.getMessages();
                     for (int i = 0; i < messages.length; ++i) {
                         MimeMessage message = (MimeMessage) messages[i];
                         if (message.getSubject().compareTo("NWTiS_poruke") == 0) {
+                            ContentType ct = new ContentType(message.getContentType());
+                            if(ct.getBaseType().compareTo("TEXT/PLAIN")==0){
+                                if(obradaNaredbe(message.getContent().toString())){
+                                    System.out.println("Dobro");
+                                }else{
+                                    System.out.println("Nije dobro");
+                                }
+                            }
+                            /*
                             Message[] poruka = new Message[1];
-                            poruka[0] = messages[i];
+                            poruka[0] = messages[i];                         
                             store.getFolder("NWTiS_poruke").appendMessages(poruka);
+                            */
                             //zaNWTiS_poruke.add(messages[i]);
                         }
                         if (message.getSubject().compareTo("NWTiS_ostalo") == 0) {
                             //zaNWTiS_ostalo.add(messages[i]);
                         }
-                        ContentType ct = new ContentType(message.getContentType());
+
                         // TODO dovršiti čitanje, obradu i prebacivanje u mape
                     }
                 }
@@ -99,6 +118,8 @@ public class ObradaPoruka extends Thread {
             } catch (InterruptedException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
             } catch (MessagingException ex) {
+                Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -130,6 +151,26 @@ public class ObradaPoruka extends Thread {
             folder = store.getFolder("NWTiS_ostalo");
             folder.create(Folder.HOLDS_MESSAGES);
         }
+    }
+
+    private boolean obradaNaredbe(String naredba) {
+        String cistaNaredba = naredba.replaceAll("(\\r|\\n)", "");
+        Pattern pattern = Pattern.compile(regexADD);
+        Matcher m = pattern.matcher(cistaNaredba);
+        if(m.matches()){
+            return true;
+        }
+        pattern = Pattern.compile(regexTEMP);
+        m = pattern.matcher(cistaNaredba);
+        if(m.matches()){
+            return true;
+        }
+        pattern = Pattern.compile(regexEVENT);
+        m = pattern.matcher(cistaNaredba);
+        if(m.matches()){
+            return true;
+        }
+        return false;
     }
 
 }
