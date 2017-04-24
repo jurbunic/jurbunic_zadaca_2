@@ -5,18 +5,26 @@
  */
 package org.foi.nwtis.jurbunic.web.zrna;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
 import javax.enterprise.context.RequestScoped;
+import javax.faces.context.FacesContext;
 import javax.mail.Folder;
+import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Store;
+import javax.mail.internet.MimeMessage;
 import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
+import org.foi.nwtis.jurbunic.konfiguracije.KonfiguracijaApstraktna;
+import org.foi.nwtis.jurbunic.konfiguracije.NeispravnaKonfiguracija;
+import org.foi.nwtis.jurbunic.konfiguracije.NemaKonfiguracije;
 import org.foi.nwtis.jurbunic.web.kontrole.Izbornik;
 import org.foi.nwtis.jurbunic.web.kontrole.Poruka;
 
@@ -27,6 +35,9 @@ import org.foi.nwtis.jurbunic.web.kontrole.Poruka;
 @Named(value = "pregledPoruka")
 @RequestScoped
 public class PregledPoruka {
+
+    FacesContext ctx;
+    Konfiguracija konf;
 
     String posljuzitelj;
     String korisnik;
@@ -40,7 +51,7 @@ public class PregledPoruka {
     Integer ukupnoPrikazano = 0;
     Integer pozicijaOd = 0;
     Integer pozicijaDo = 0;
-    
+
     Store store;
 
     private ArrayList<Poruka> poruke = new ArrayList<>();
@@ -50,24 +61,32 @@ public class PregledPoruka {
      * Creates a new instance of PregledPoruka
      */
     public PregledPoruka() {
-        preuzimPoruke();
+        ctx = FacesContext.getCurrentInstance();
         preuzmiMape();
+        preuzimPoruke();
     }
 
     void preuzmiMape() {
         try {
+            dohvatiKonfiguraciju();
             java.util.Properties properties = System.getProperties();
-            properties.put("mail.smtp.host", "127.0.0.1");
+            properties.put("mail.smtp.host", konf.dajPostavku("mail.server"));
+            //properties.put("mail.smtp.port", konf.dajPostavku("mail.port"));
+            //properties.put("mail.smtp.username", konf.dajPostavku("mail.usernameView"));
+            //properties.put("mail.smtp.password", konf.dajPostavku("mail.passwordView"));
             Session session = Session.getInstance(properties, null);
             store = session.getStore("imap");
             store.connect("127.0.0.1", 143, "servis@nwtis.nastava.foi.hr", "123456");
-            store.getFolder("NWTiS_poruke").getFullName();
-            mape.add(new Izbornik(store.getFolder("NWTiS_poruke").getFullName(),"NWTiS_poruke"));
-            mape.add(new Izbornik(store.getFolder("NWTiS_ostalo").getFullName(),"NWTiS_ostalo"));
-            
+            mape.add(new Izbornik(store.getFolder("NWTiS_poruke").getFullName(), "NWTiS_poruke"));
+            mape.add(new Izbornik(store.getFolder("NWTiS_ostalo").getFullName(), "NWTiS_ostalo"));
+
         } catch (NoSuchProviderException ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MessagingException ex) {
+            Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NemaKonfiguracije ex) {
+            Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NeispravnaKonfiguracija ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -77,12 +96,32 @@ public class PregledPoruka {
         //TODO promjeni sa stavrnim preuzimanjem poruka!
         //TODO razmisli o optimiranju preuzimanja poruka!
         poruke.clear();
-        for(int i=0;i<mape.size();i++){
-            if(mape.get(i).getVrijednost().compareTo("NWTiS_poruke")==0){
-                
+        for (int i = 0; i < mape.size(); i++) {
+            if (mape.get(i).getVrijednost().compareTo("NWTiS_poruke") == 0) {
+                try {
+                    Folder folder = store.getFolder("NWTiS_poruke");
+                    folder.open(Folder.READ_ONLY);
+                    Message[] messages = folder.getMessages();
+                    for (int j = 0; j < messages.length; j++) {
+                        MimeMessage message = (MimeMessage) messages[j];
+                        String primatelji="";
+                        for(int k=0;k<message.getAllRecipients().length;k++){
+                            primatelji+=message.getAllRecipients()[k].toString();
+                        }
+                        Poruka poruka = new Poruka(message.getContentID(), message.getSentDate(),
+                                message.getReceivedDate(), primatelji, message.getSubject(),
+                                (String) message.getContent(), message.getContentType());
+                        poruke.add(poruka);
+                    }
+                } catch (MessagingException ex) {
+                    Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
         int i = 0;
+        /*
         poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
         poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
         poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
@@ -94,6 +133,7 @@ public class PregledPoruka {
         poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
         poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
         poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
+         */
         ukupanBrojMAPA = poruke.size();
 
     }
@@ -164,6 +204,12 @@ public class PregledPoruka {
 
     public void setOdabranaMapa(String odabranaMapa) {
         this.odabranaMapa = odabranaMapa;
+    }
+
+    private void dohvatiKonfiguraciju() throws NemaKonfiguracije, NeispravnaKonfiguracija {
+        String datoteka = ctx.getExternalContext().getRealPath("/WEB-INF")
+                + File.separator + ctx.getExternalContext().getInitParameter("konfiguracija");
+        konf = KonfiguracijaApstraktna.preuzmiKonfiguraciju(datoteka);
     }
 
 }

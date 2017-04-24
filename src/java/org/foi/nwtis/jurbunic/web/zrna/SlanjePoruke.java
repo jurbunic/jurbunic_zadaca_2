@@ -5,6 +5,7 @@
  */
 package org.foi.nwtis.jurbunic.web.zrna;
 
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
@@ -37,14 +38,14 @@ public class SlanjePoruke {
      * Creates a new instance of SlanjePoruke
      */
     public SlanjePoruke() {
+
     }
 
     public String saljiPoruku() throws NoSuchProviderException {
         try {
             //TODO dodaj ovdje slanje poruke prema primjeru sa predavanja
             Session session = Session.getDefaultInstance(System.getProperties());
-            MimeMessage message = new MimeMessage(session);
-            
+            MimeMessage message = new MimeMessage(session);            
             Address fromAddress = new InternetAddress(salje);
             message.setFrom(fromAddress);
             Address[] toAddresses = InternetAddress.parse(prima);

@@ -11,6 +11,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.mail.Flags;
+import javax.mail.Flags.Flag;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -28,11 +30,22 @@ import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
 public class ObradaPoruka extends Thread {
 
     //-----------REGEKSI----------------
-    final String regexADD = "^ADD IoT ([1-6]) \"([^\\\\s]+)\" GPS: ([0-9]{1,3}.[0-9]{6}), ([0-9]{1,3}.[0-9]{6});$";
+    final String regexADD = "^ADD IoT ([1-6]) \"([^\\s]+)\" GPS: ([0-9]{1,3}.[0-9]{6}), ([0-9]{1,3}.[0-9]{6});$";
     final String regexTEMP = "^TEMP IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) C:([0-9]{1,2})[.][0-9];$";
     final String regexEVENT = "^EVENT IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) F:([0-9]{1,2});$";
     //----------------------------------
-
+    //-----------STATISTIKA-------------
+    static Long obradaZapocela;
+    static Long obradaZavrsila;
+    static Long trajanjeObrade;
+    static Long trajanjeCiklusa;
+    static int redniBrojCiklusa;
+    static int brojPoruka;
+    static int brojdodanihIOT;
+    static int brojMjerenihTEMP;
+    static int brojIzvrsenihEVENT;
+    static int brojPogresaka;
+    //----------------------------------
     private ServletContext sc = null;
     private boolean prekidObrade = false;
 
@@ -57,8 +70,8 @@ public class ObradaPoruka extends Thread {
         String port = konf.dajPostavku("mail.port");
         String korisnik = konf.dajPostavku("mail.usernameThread");
         String lozinka = konf.dajPostavku("mail.passwordThread");
-        int trajanjeCiklusa = Integer.parseInt(konf.dajPostavku("mail.timeSecThread"));
-        int trajanjeObrade = 0;
+        trajanjeCiklusa = Long.parseLong(konf.dajPostavku("mail.timeSecThread"));
+        trajanjeObrade = 0l;
         // TODO odredi trajanje
         try {
             // TODO dodati ostale parametre!
@@ -66,54 +79,52 @@ public class ObradaPoruka extends Thread {
         } catch (MessagingException ex) {
             Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
-        int redniBrojCiklusa = 0;
+        redniBrojCiklusa = 0;
         while (!prekidObrade) {
-            try {
-                //----Citanje poruka----//                         
-                // Open the INBOX folder
 
+            try {
+                Long pocetak = System.currentTimeMillis();
+                // Open the INBOX folder
                 folder = store.getFolder("INBOX");
-                folder.open(Folder.READ_ONLY);
+                folder.open(Folder.READ_WRITE);
+                //----Citanje poruka----//                         
                 if (folder.hasNewMessages()) {
+                    brojPoruka = 0;
                     messages = folder.getMessages();
                     for (int i = 0; i < messages.length; ++i) {
                         MimeMessage message = (MimeMessage) messages[i];
+                        brojPoruka++;
                         if (message.getSubject().compareTo("NWTiS_poruke") == 0) {
                             ContentType ct = new ContentType(message.getContentType());
-                            if(ct.getBaseType().compareTo("TEXT/PLAIN")==0){
-                                if(obradaNaredbe(message.getContent().toString())){
+                            if (ct.getBaseType().compareTo("TEXT/PLAIN") == 0) {
+                                if (obradaNaredbe(message.getContent().toString())) {
                                     System.out.println("Dobro");
-                                }else{
+                                    Message[] poruka = new Message[1];
+                                    poruka[0] = messages[i];
+                                    folder.setFlags(poruka, new Flags(Flag.SEEN), true);
+                                    store.getFolder("NWTiS_poruke").appendMessages(poruka);
+                                } else {
+                                    brojPogresaka++;
                                     System.out.println("Nije dobro");
                                 }
                             }
-                            /*
+                        } else if (message.getSubject().compareTo("NWTiS_ostalo") == 0) {
                             Message[] poruka = new Message[1];
-                            poruka[0] = messages[i];                         
-                            store.getFolder("NWTiS_poruke").appendMessages(poruka);
-                            */
-                            //zaNWTiS_poruke.add(messages[i]);
+                            poruka[0] = messages[i];
+                            folder.setFlags(messages, new Flags(Flag.SEEN), prekidObrade);
+                        } else {
+                            System.out.println("U spam!");
                         }
-                        if (message.getSubject().compareTo("NWTiS_ostalo") == 0) {
-                            //zaNWTiS_ostalo.add(messages[i]);
-                        }
-
+                        messages[i].setFlag(Flag.DELETED, true);
                         // TODO dovršiti čitanje, obradu i prebacivanje u mape
                     }
                 }
-
-                //System.out.println(zaNWTiS_poruke.size());
-                //Message[] porukeNWTiS_poruke = new Message[zaNWTiS_poruke.size()];
-                //porukeNWTiS_poruke = zaNWTiS_poruke.toArray(porukeNWTiS_poruke);
-                //for(Message m:porukeNWTiS_poruke){
-                //    System.out.println(m.getSubject());
-                //}
-                //folder = store.getFolder("NWTiS_poruke");
-                //folder.appendMessages(porukeNWTiS_poruke);
                 redniBrojCiklusa++;
-                //System.out.println("Broj u NWTiS_poruke:" + folder.getFullName()+":::"+folder.getMessageCount());
                 System.out.println("ObradaPoruka" + redniBrojCiklusa);
                 //!---Citanje poruka---!//
+                trajanjeObrade = System.currentTimeMillis() - pocetak;
+                //TODO ovdje ide slanje maila statistike!
+                folder.close(true);
                 sleep(trajanjeCiklusa * 1000 - trajanjeObrade);
             } catch (InterruptedException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -142,7 +153,6 @@ public class ObradaPoruka extends Thread {
         // Connect to the store
         store = session.getStore("imap");
         store.connect(server, korisnik, lozinka);
-
         if (!store.getFolder("NWTiS_poruke").exists()) {
             folder = store.getFolder("NWTiS_poruke");
             folder.create(Folder.HOLDS_MESSAGES);
@@ -157,17 +167,20 @@ public class ObradaPoruka extends Thread {
         String cistaNaredba = naredba.replaceAll("(\\r|\\n)", "");
         Pattern pattern = Pattern.compile(regexADD);
         Matcher m = pattern.matcher(cistaNaredba);
-        if(m.matches()){
+        if (m.matches()) {
+            brojdodanihIOT++;
             return true;
         }
         pattern = Pattern.compile(regexTEMP);
         m = pattern.matcher(cistaNaredba);
-        if(m.matches()){
+        if (m.matches()) {
+            brojMjerenihTEMP++;
             return true;
         }
         pattern = Pattern.compile(regexEVENT);
         m = pattern.matcher(cistaNaredba);
-        if(m.matches()){
+        if (m.matches()) {
+            brojIzvrsenihEVENT++;
             return true;
         }
         return false;
