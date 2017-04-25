@@ -8,7 +8,6 @@ package org.foi.nwtis.jurbunic.web.zrna;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
@@ -95,48 +94,33 @@ public class PregledPoruka {
 
         //TODO promjeni sa stavrnim preuzimanjem poruka!
         //TODO razmisli o optimiranju preuzimanja poruka!
-        poruke.clear();
-        for (int i = 0; i < mape.size(); i++) {
-            if (mape.get(i).getVrijednost().compareTo("NWTiS_poruke") == 0) {
-                try {
-                    Folder folder = store.getFolder("NWTiS_poruke");
-                    folder.open(Folder.READ_ONLY);
-                    Message[] messages = folder.getMessages();
-                    for (int j = 0; j < messages.length; j++) {
-                        MimeMessage message = (MimeMessage) messages[j];
-                        String primatelji="";
-                        for(int k=0;k<message.getAllRecipients().length;k++){
-                            primatelji+=message.getAllRecipients()[k].toString();
-                        }
-                        Poruka poruka = new Poruka(message.getContentID(), message.getSentDate(),
-                                message.getReceivedDate(), primatelji, message.getSubject(),
-                                (String) message.getContent(), message.getContentType());
-                        poruke.add(poruka);
+        if (odabranaMapa == null) {
+            return;
+        } else {
+            try {
+                Folder folder = store.getFolder(odabranaMapa);
+                folder.open(Folder.READ_ONLY);
+                Message[] messages = folder.getMessages();
+                for (int j = 0; j < messages.length; j++) {
+                    MimeMessage message = (MimeMessage) messages[j];
+                    String primatelji = "";
+                    for (int k = 0; k < message.getAllRecipients().length; k++) {
+                        primatelji += message.getAllRecipients()[k].toString();
                     }
-                } catch (MessagingException ex) {
-                    Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException ex) {
-                    Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+                    Poruka poruka = new Poruka(message.getContentID(), message.getSentDate(),
+                            message.getReceivedDate(), primatelji, message.getSubject(),
+                            (String) message.getContent(), message.getContentType());
+                    poruke.add(poruka);
                 }
+            } catch (MessagingException ex) {
+                Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
             }
+            ukupanBrojMAPA = poruke.size();
         }
-        int i = 0;
-        /*
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-        poruke.add(new Poruka(Integer.toString(i++), new Date(), new Date(), "pero@localhost", "P " + Integer.toString(i), "Poruka " + Integer.toString(i), "0"));
-         */
-        ukupanBrojMAPA = poruke.size();
-
     }
+    
 
     public String promjenaMape() {
         this.preuzimPoruke();

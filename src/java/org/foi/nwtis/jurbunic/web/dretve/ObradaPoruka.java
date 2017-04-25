@@ -101,18 +101,25 @@ public class ObradaPoruka extends Thread {
                                     System.out.println("Dobro");
                                     Message[] poruka = new Message[1];
                                     poruka[0] = messages[i];
-                                    folder.setFlags(poruka, new Flags(Flag.SEEN), true);
+                                    //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
                                     store.getFolder("NWTiS_poruke").appendMessages(poruka);
                                 } else {
                                     brojPogresaka++;
                                     System.out.println("Nije dobro");
+                                    Message[] poruka = new Message[1];
+                                    poruka[0] = messages[i];
+                                    store.getFolder("Spam").appendMessages(poruka);
                                 }
                             }
                         } else if (message.getSubject().compareTo("NWTiS_ostalo") == 0) {
                             Message[] poruka = new Message[1];
                             poruka[0] = messages[i];
-                            folder.setFlags(messages, new Flags(Flag.SEEN), prekidObrade);
+                            //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
+                            store.getFolder("NWTiS_ostalo").appendMessages(poruka);
                         } else {
+                            Message[] poruka = new Message[1];
+                            poruka[0] = messages[i];
+                            //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
                             System.out.println("U spam!");
                         }
                         messages[i].setFlag(Flag.DELETED, true);
@@ -159,6 +166,10 @@ public class ObradaPoruka extends Thread {
         }
         if (!store.getFolder("NWTiS_ostalo").exists()) {
             folder = store.getFolder("NWTiS_ostalo");
+            folder.create(Folder.HOLDS_MESSAGES);
+        }
+        if (!store.getFolder("Spam").exists()){
+            folder = store.getFolder("Spam");
             folder.create(Folder.HOLDS_MESSAGES);
         }
     }
