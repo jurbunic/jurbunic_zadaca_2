@@ -19,6 +19,7 @@ import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -52,7 +53,7 @@ public class SlanjePoruke {
             message.setRecipients(Message.RecipientType.TO, toAddresses);
             message.setSubject(predmet);
             message.setText(sadrzaj);
-            Transport.send(message);           
+            Transport.send(message);
         } catch (AddressException ex) {
             Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MessagingException ex) {

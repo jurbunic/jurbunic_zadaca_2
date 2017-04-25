@@ -34,7 +34,7 @@ import org.foi.nwtis.jurbunic.web.kontrole.Poruka;
 @Named(value = "pregledPoruka")
 @RequestScoped
 public class PregledPoruka {
-
+    
     FacesContext ctx;
     Konfiguracija konf;
 
@@ -49,10 +49,11 @@ public class PregledPoruka {
 
     Integer ukupnoPrikazano = 0;
     Integer pozicijaOd = 0;
-    Integer pozicijaDo = 0;
+    Integer pozicijaDo = 5;
 
     Store store;
-
+    Stranicenje stranice;
+    
     private ArrayList<Poruka> poruke = new ArrayList<>();
     private ArrayList<Izbornik> mape = new ArrayList<>();
 
@@ -61,6 +62,7 @@ public class PregledPoruka {
      */
     public PregledPoruka() {
         ctx = FacesContext.getCurrentInstance();
+        stranice = Stranicenje.getInstance(5);
         preuzmiMape();
         preuzimPoruke();
     }
@@ -78,6 +80,10 @@ public class PregledPoruka {
             store.connect("127.0.0.1", 143, "servis@nwtis.nastava.foi.hr", "123456");
             mape.add(new Izbornik(store.getFolder("NWTiS_poruke").getFullName(), "NWTiS_poruke"));
             mape.add(new Izbornik(store.getFolder("NWTiS_ostalo").getFullName(), "NWTiS_ostalo"));
+            mape.add(new Izbornik(store.getFolder("Spam").getFullName(), "Spam"));
+            ukupanBrojPORUKA += store.getFolder("Spam").getMessageCount()
+                    +store.getFolder("NWTiS_ostalo").getMessageCount()
+                    +store.getFolder("NWTiS_poruke").getMessageCount();
 
         } catch (NoSuchProviderException ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -91,7 +97,7 @@ public class PregledPoruka {
     }
 
     void preuzimPoruke() {
-
+        
         //TODO promjeni sa stavrnim preuzimanjem poruka!
         //TODO razmisli o optimiranju preuzimanja poruka!
         if (odabranaMapa == null) {
@@ -100,9 +106,11 @@ public class PregledPoruka {
             try {
                 Folder folder = store.getFolder(odabranaMapa);
                 folder.open(Folder.READ_ONLY);
+                ukupanBrojMAPA = folder.getMessageCount();
                 Message[] messages = folder.getMessages();
-                for (int j = 0; j < messages.length; j++) {
-                    MimeMessage message = (MimeMessage) messages[j];
+                for ( ; pozicijaOd < pozicijaDo; pozicijaOd++) {
+                    try{
+                        MimeMessage message = (MimeMessage) messages[pozicijaOd];
                     String primatelji = "";
                     for (int k = 0; k < message.getAllRecipients().length; k++) {
                         primatelji += message.getAllRecipients()[k].toString();
@@ -111,6 +119,10 @@ public class PregledPoruka {
                             message.getReceivedDate(), primatelji, message.getSubject(),
                             (String) message.getContent(), message.getContentType());
                     poruke.add(poruka);
+                    }catch(ArrayIndexOutOfBoundsException ex){
+                        return;
+                    }
+                    
                 }
             } catch (MessagingException ex) {
                 Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -128,19 +140,26 @@ public class PregledPoruka {
     }
 
     public String filtrirajPoruke() {
+        System.out.println("Neki tekst: "+traziPoruke);
         this.preuzimPoruke();
         return "FiltrirajPoruke";
     }
 
     public String prethodnePoruke() {
+        pozicijaOd = stranice.getPozicijaOdNatrag();
+        pozicijaDo = stranice.getPozicijaDoNatrag();
         this.preuzimPoruke();
         return "prethodnePoruke";
     }
 
     public String sljedecePoruke() {
+        pozicijaOd = stranice.getPozicijaOdNaprijed();
+        pozicijaDo = stranice.getPozicijaDoNaprijed();
         this.preuzimPoruke();
         return "SljedecePoruke";
     }
+    
+    
 
     public String promjenaJezika() {
         return "promjenaJezika";
@@ -195,5 +214,5 @@ public class PregledPoruka {
                 + File.separator + ctx.getExternalContext().getInitParameter("konfiguracija");
         konf = KonfiguracijaApstraktna.preuzmiKonfiguraciju(datoteka);
     }
-
+    
 }

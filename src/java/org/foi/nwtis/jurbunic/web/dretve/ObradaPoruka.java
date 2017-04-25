@@ -6,12 +6,16 @@
 package org.foi.nwtis.jurbunic.web.dretve;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.mail.Flags;
 import javax.mail.Flags.Flag;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -22,6 +26,7 @@ import javax.mail.internet.ContentType;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletContext;
 import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
+import org.foi.nwtis.jurbunic.konfiguracije.bp.BP_Konfiguracija;
 
 /**
  *
@@ -48,6 +53,7 @@ public class ObradaPoruka extends Thread {
     //----------------------------------
     private ServletContext sc = null;
     private boolean prekidObrade = false;
+    BP_Konfiguracija bpkonf;
 
     private Session session;
     private Store store;
@@ -66,16 +72,16 @@ public class ObradaPoruka extends Thread {
     @Override
     public void run() {
         Konfiguracija konf = (Konfiguracija) sc.getAttribute("Mail_Konfig");
+        bpkonf = (BP_Konfiguracija) sc.getAttribute("BP_Konfig");
         String server = konf.dajPostavku("mail.server");
         String port = konf.dajPostavku("mail.port");
         String korisnik = konf.dajPostavku("mail.usernameThread");
         String lozinka = konf.dajPostavku("mail.passwordThread");
         trajanjeCiklusa = Long.parseLong(konf.dajPostavku("mail.timeSecThread"));
-        trajanjeObrade = 0l;
-        // TODO odredi trajanje
+        trajanjeObrade = 0l;        
         try {
             // TODO dodati ostale parametre!
-            spajanje(server, port, korisnik, lozinka);
+            spajanjeMail(server, port, korisnik, lozinka);
         } catch (MessagingException ex) {
             Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -120,6 +126,7 @@ public class ObradaPoruka extends Thread {
                             Message[] poruka = new Message[1];
                             poruka[0] = messages[i];
                             //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
+                            store.getFolder("Spam").appendMessages(poruka);
                             System.out.println("U spam!");
                         }
                         messages[i].setFlag(Flag.DELETED, true);
@@ -152,7 +159,29 @@ public class ObradaPoruka extends Thread {
         this.sc = sc;
     }
 
-    private void spajanje(String server, String port, String korisnik, String lozinka) throws MessagingException {
+    private void spajanjeBaza(String sqlNaredba){
+        try {
+            Class.forName(bpkonf.getDriverDatabase());
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try (Connection veza = DriverManager.getConnection(
+                bpkonf.getServerDatabase()+bpkonf.getUserDatabase(),
+                bpkonf.getUserDatabase(),
+                bpkonf.getUserPassword());) {
+            Statement naredba = veza.createStatement();
+            ResultSet odgovor = naredba.executeQuery(sqlNaredba);
+            odgovor.next();
+            System.out.println(odgovor.getString("naziv"));
+        } catch (SQLException ex) {
+            Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+    }
+    
+    private void izvrsiNaredbuDb(String naredba){
+        
+    }
+    private void spajanjeMail(String server, String port, String korisnik, String lozinka) throws MessagingException {
         // Start the session
         java.util.Properties properties = System.getProperties();
         properties.put("mail.smtp.host", server);
@@ -179,6 +208,7 @@ public class ObradaPoruka extends Thread {
         Pattern pattern = Pattern.compile(regexADD);
         Matcher m = pattern.matcher(cistaNaredba);
         if (m.matches()) {
+            String sql = "INSERT INTO uredaji VALUES (null,'',f,f,i,d,d)";
             brojdodanihIOT++;
             return true;
         }
