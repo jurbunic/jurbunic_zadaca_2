@@ -8,6 +8,7 @@ package org.foi.nwtis.jurbunic.web.zrna;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
@@ -34,7 +35,7 @@ import org.foi.nwtis.jurbunic.web.kontrole.Poruka;
 @Named(value = "pregledPoruka")
 @RequestScoped
 public class PregledPoruka {
-    
+
     FacesContext ctx;
     Konfiguracija konf;
 
@@ -49,11 +50,20 @@ public class PregledPoruka {
 
     Integer ukupnoPrikazano = 0;
     Integer pozicijaOd = 0;
-    Integer pozicijaDo = 5;
+    Integer pozicijaDo = 0;
 
     Store store;
-    Stranicenje stranice;
-    
+
+    private String trenutnaStranica;
+
+    public String getTrenutnaStranica() {
+        return trenutnaStranica;
+    }
+
+    public void setTrenutnaStranica(String trenutnaStranica) {
+        this.trenutnaStranica = trenutnaStranica;
+    }
+
     private ArrayList<Poruka> poruke = new ArrayList<>();
     private ArrayList<Izbornik> mape = new ArrayList<>();
 
@@ -61,15 +71,20 @@ public class PregledPoruka {
      * Creates a new instance of PregledPoruka
      */
     public PregledPoruka() {
-        ctx = FacesContext.getCurrentInstance();
-        stranice = Stranicenje.getInstance(5);
-        preuzmiMape();
-        preuzimPoruke();
+        try {
+            ctx = FacesContext.getCurrentInstance();
+            dohvatiKonfiguraciju();
+            preuzmiMape();
+            preuzimPoruke();
+        } catch (NemaKonfiguracije ex) {
+            Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (NeispravnaKonfiguracija ex) {
+            Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     void preuzmiMape() {
         try {
-            dohvatiKonfiguraciju();
             java.util.Properties properties = System.getProperties();
             properties.put("mail.smtp.host", konf.dajPostavku("mail.server"));
             //properties.put("mail.smtp.port", konf.dajPostavku("mail.port"));
@@ -78,26 +93,23 @@ public class PregledPoruka {
             Session session = Session.getInstance(properties, null);
             store = session.getStore("imap");
             store.connect("127.0.0.1", 143, "servis@nwtis.nastava.foi.hr", "123456");
-            mape.add(new Izbornik(store.getFolder("NWTiS_poruke").getFullName(), "NWTiS_poruke"));
-            mape.add(new Izbornik(store.getFolder("NWTiS_ostalo").getFullName(), "NWTiS_ostalo"));
-            mape.add(new Izbornik(store.getFolder("Spam").getFullName(), "Spam"));
+            mape.add(new Izbornik(store.getFolder("INBOX").getFullName() + " - " + store.getFolder("INBOX").getMessageCount(), "INBOX"));
+            mape.add(new Izbornik(store.getFolder("NWTiS_poruke").getFullName() + " - " + store.getFolder("NWTiS_poruke").getMessageCount(), "NWTiS_poruke"));
+            mape.add(new Izbornik(store.getFolder("NWTiS_ostalo").getFullName() + " - " + store.getFolder("NWTiS_ostalo").getMessageCount(), "NWTiS_ostalo"));
+            mape.add(new Izbornik(store.getFolder("Spam").getFullName() + " - " + store.getFolder("Spam").getMessageCount(), "Spam"));
             ukupanBrojPORUKA += store.getFolder("Spam").getMessageCount()
-                    +store.getFolder("NWTiS_ostalo").getMessageCount()
-                    +store.getFolder("NWTiS_poruke").getMessageCount();
+                    + store.getFolder("NWTiS_ostalo").getMessageCount()
+                    + store.getFolder("NWTiS_poruke").getMessageCount();
 
         } catch (NoSuchProviderException ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MessagingException ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (NemaKonfiguracije ex) {
-            Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (NeispravnaKonfiguracija ex) {
-            Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     void preuzimPoruke() {
-        
+
         //TODO promjeni sa stavrnim preuzimanjem poruka!
         //TODO razmisli o optimiranju preuzimanja poruka!
         if (odabranaMapa == null) {
@@ -107,10 +119,21 @@ public class PregledPoruka {
                 Folder folder = store.getFolder(odabranaMapa);
                 folder.open(Folder.READ_ONLY);
                 ukupanBrojMAPA = folder.getMessageCount();
-                Message[] messages = folder.getMessages();
-                for ( ; pozicijaOd < pozicijaDo; pozicijaOd++) {
-                    try{
-                        MimeMessage message = (MimeMessage) messages[pozicijaOd];
+                if (trenutnaStranica.isEmpty()) {
+                    trenutnaStranica = "0";
+                }
+                pozicijaOd = ukupanBrojMAPA - Integer.parseInt(konf.dajPostavku("mail.numMessages")) * (Integer.valueOf(trenutnaStranica) + 1);
+                pozicijaDo = ukupanBrojMAPA - Integer.parseInt(konf.dajPostavku("mail.numMessages")) * Integer.valueOf(trenutnaStranica);
+                if (pozicijaOd < 1) {
+                    pozicijaOd = 1;
+                }
+                if (pozicijaDo < 1) {
+                    pozicijaDo += Integer.parseInt(konf.dajPostavku("mail.numMessages"));
+                }
+                Message[] messages = folder.getMessages(pozicijaOd, pozicijaDo);
+                for (int i = 0; i < messages.length; i++) {
+
+                    MimeMessage message = (MimeMessage) messages[i];
                     String primatelji = "";
                     for (int k = 0; k < message.getAllRecipients().length; k++) {
                         primatelji += message.getAllRecipients()[k].toString();
@@ -119,22 +142,21 @@ public class PregledPoruka {
                             message.getReceivedDate(), primatelji, message.getSubject(),
                             (String) message.getContent(), message.getContentType());
                     poruke.add(poruka);
-                    }catch(ArrayIndexOutOfBoundsException ex){
-                        return;
-                    }
-                    
                 }
+                    
             } catch (MessagingException ex) {
                 Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
                 Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IndexOutOfBoundsException ex){
+                return;
             }
-            ukupanBrojMAPA = poruke.size();
-        }
+        
+        ukupanBrojMAPA = poruke.size();
     }
-    
+}
 
-    public String promjenaMape() {
+public String promjenaMape() {
         this.preuzimPoruke();
         return "PromjenaMape";
     }
@@ -146,15 +168,27 @@ public class PregledPoruka {
     }
 
     public String prethodnePoruke() {
-        pozicijaOd = stranice.getPozicijaOdNatrag();
-        pozicijaDo = stranice.getPozicijaDoNatrag();
+        if(trenutnaStranica.isEmpty()){
+            trenutnaStranica = "0";
+        }
+        Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
+        String action = params.get("inkrementStranice");
+        int test1 = Integer.parseInt(trenutnaStranica);
+        test1 -= Integer.parseInt(action);
+        trenutnaStranica = String.valueOf(test1);
         this.preuzimPoruke();
         return "prethodnePoruke";
     }
 
-    public String sljedecePoruke() {
-        pozicijaOd = stranice.getPozicijaOdNaprijed();
-        pozicijaDo = stranice.getPozicijaDoNaprijed();
+    public String sljedecePoruke() {       
+        if(trenutnaStranica.isEmpty()){
+            trenutnaStranica = "0";
+        }
+        Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
+        String action = params.get("inkrementStranice");
+        int test1 = Integer.parseInt(trenutnaStranica);
+        test1 += Integer.parseInt(action);
+        trenutnaStranica = String.valueOf(test1);
         this.preuzimPoruke();
         return "SljedecePoruke";
     }

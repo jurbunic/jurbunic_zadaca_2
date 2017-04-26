@@ -5,6 +5,7 @@
  */
 package org.foi.nwtis.jurbunic.web.zrna;
 
+import java.util.Date;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,6 +52,7 @@ public class SlanjePoruke {
             message.setFrom(fromAddress);
             Address[] toAddresses = InternetAddress.parse(prima);
             message.setRecipients(Message.RecipientType.TO, toAddresses);
+            message.setSentDate(new Date());
             message.setSubject(predmet);
             message.setText(sadrzaj);
             Transport.send(message);

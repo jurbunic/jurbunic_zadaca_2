@@ -43,8 +43,13 @@
                     </h:column>
                 </h:dataTable>
                 <h:outputText value="#{m.pregledPoruka_ukupnoPoruka}"/>: <h:outputText value="#{pregledPoruka.ukupanBrojPORUKA}"/><br/>
-                <h:commandButton value="#{m.pregledPoruka_gumbPrethodnePoruke}" action="#{pregledPoruka.prethodnePoruke()}" />
-                <h:commandButton value="#{m.pregledPoruka_gumbSljedecePoruke}" action="#{pregledPoruka.sljedecePoruke()}" />
+                <h:commandButton value="#{m.pregledPoruka_gumbPrethodnePoruke}" action="#{pregledPoruka.prethodnePoruke()}" >
+                    <f:param name="inkrementStranice" value="1"/>
+                </h:commandButton>
+                <h:inputHidden value="#{pregledPoruka.trenutnaStranica}"/>
+                <h:commandButton value="#{m.pregledPoruka_gumbSljedecePoruke}" action="#{pregledPoruka.sljedecePoruke()}" >
+                    <f:param name="inkrementStranice" value="1"/>
+                </h:commandButton>
             </h:form>
         </h:body>
     </f:view>

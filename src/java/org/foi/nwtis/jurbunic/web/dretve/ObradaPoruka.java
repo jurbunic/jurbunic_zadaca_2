@@ -11,7 +11,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -35,7 +37,7 @@ import org.foi.nwtis.jurbunic.konfiguracije.bp.BP_Konfiguracija;
 public class ObradaPoruka extends Thread {
 
     //-----------REGEKSI----------------
-    final String regexADD = "^ADD IoT ([1-6]) \"([^\\s]+)\" GPS: ([0-9]{1,3}.[0-9]{6}), ([0-9]{1,3}.[0-9]{6});$";
+    final String regexADD = "^ADD IoT ([1-6]) \\\"([^\\\\s]+)\\\"GPS: ([0-9]{1,3}.[0-9]{6}), ([0-9]{1,3}.[0-9]{6});";
     final String regexTEMP = "^TEMP IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) C:([0-9]{1,2})[.][0-9];$";
     final String regexEVENT = "^EVENT IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) F:([0-9]{1,2});$";
     //----------------------------------
@@ -51,9 +53,14 @@ public class ObradaPoruka extends Thread {
     static int brojIzvrsenihEVENT;
     static int brojPogresaka;
     //----------------------------------
+    //------------ID baze---------------
+    private int uredajiId;
+    private int tempId;
+    //----------------------------------
     private ServletContext sc = null;
     private boolean prekidObrade = false;
     BP_Konfiguracija bpkonf;
+    private Connection veza;
 
     private Session session;
     private Store store;
@@ -78,13 +85,13 @@ public class ObradaPoruka extends Thread {
         String korisnik = konf.dajPostavku("mail.usernameThread");
         String lozinka = konf.dajPostavku("mail.passwordThread");
         trajanjeCiklusa = Long.parseLong(konf.dajPostavku("mail.timeSecThread"));
-        trajanjeObrade = 0l;        
+        trajanjeObrade = 0l;
         try {
-            // TODO dodati ostale parametre!
             spajanjeMail(server, port, korisnik, lozinka);
         } catch (MessagingException ex) {
             Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
+        spajanjeBaza();
         redniBrojCiklusa = 0;
         while (!prekidObrade) {
 
@@ -107,8 +114,8 @@ public class ObradaPoruka extends Thread {
                                     System.out.println("Dobro");
                                     Message[] poruka = new Message[1];
                                     poruka[0] = messages[i];
-                                    //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
                                     store.getFolder("NWTiS_poruke").appendMessages(poruka);
+
                                 } else {
                                     brojPogresaka++;
                                     System.out.println("Nije dobro");
@@ -159,28 +166,23 @@ public class ObradaPoruka extends Thread {
         this.sc = sc;
     }
 
-    private void spajanjeBaza(String sqlNaredba){
+    private void spajanjeBaza() {
         try {
             Class.forName(bpkonf.getDriverDatabase());
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
-        try (Connection veza = DriverManager.getConnection(
-                bpkonf.getServerDatabase()+bpkonf.getUserDatabase(),
-                bpkonf.getUserDatabase(),
-                bpkonf.getUserPassword());) {
-            Statement naredba = veza.createStatement();
-            ResultSet odgovor = naredba.executeQuery(sqlNaredba);
-            odgovor.next();
-            System.out.println(odgovor.getString("naziv"));
+        try {
+            veza = DriverManager.getConnection(
+                    bpkonf.getServerDatabase() + bpkonf.getUserDatabase(),
+                    bpkonf.getUserUsername(),
+                    bpkonf.getUserPassword());
         } catch (SQLException ex) {
             Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
-        } 
+        }
+
     }
-    
-    private void izvrsiNaredbuDb(String naredba){
-        
-    }
+
     private void spajanjeMail(String server, String port, String korisnik, String lozinka) throws MessagingException {
         // Start the session
         java.util.Properties properties = System.getProperties();
@@ -197,7 +199,7 @@ public class ObradaPoruka extends Thread {
             folder = store.getFolder("NWTiS_ostalo");
             folder.create(Folder.HOLDS_MESSAGES);
         }
-        if (!store.getFolder("Spam").exists()){
+        if (!store.getFolder("Spam").exists()) {
             folder = store.getFolder("Spam");
             folder.create(Folder.HOLDS_MESSAGES);
         }
@@ -207,10 +209,20 @@ public class ObradaPoruka extends Thread {
         String cistaNaredba = naredba.replaceAll("(\\r|\\n)", "");
         Pattern pattern = Pattern.compile(regexADD);
         Matcher m = pattern.matcher(cistaNaredba);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         if (m.matches()) {
-            String sql = "INSERT INTO uredaji VALUES (null,'',f,f,i,d,d)";
-            brojdodanihIOT++;
-            return true;
+            Date datumKreiranja = new Date();
+            String sqlUpit = "SELECT naziv FROM uredaji WHERE naziv='"+m.group(2)+"'";
+            if (bazaUpit(sqlUpit)) {
+                String sqlUnos = "INSERT INTO uredaji (id,naziv,latitude,longitude,status,vrijeme_promjene,vrijeme_kreiranja) VALUES "
+                        + "(" + 143 + ",'" + m.group(2) + "'," + m.group(3) + "," + m.group(4) + ","
+                        + m.group(1) + ",'" + sdf.format(datumKreiranja) + "','" + sdf.format(datumKreiranja) + "')";
+                unosUBazu(sqlUnos);
+                brojdodanihIOT++;
+                return true;
+            } else {
+                return false;
+            }
         }
         pattern = Pattern.compile(regexTEMP);
         m = pattern.matcher(cistaNaredba);
@@ -225,6 +237,28 @@ public class ObradaPoruka extends Thread {
             return true;
         }
         return false;
+    }
+
+    private boolean bazaUpit(String sqlNaredba) {
+        try {
+            Statement naredba = veza.createStatement();
+            ResultSet odgovor = naredba.executeQuery(sqlNaredba);           
+            if (!odgovor.next()) {
+                return true;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return false;
+    }
+
+    private void unosUBazu(String sqlNaredba) {
+        try {
+            Statement naredba = veza.createStatement();
+            naredba.executeUpdate(sqlNaredba);
+        } catch (SQLException ex) {
+            Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }
