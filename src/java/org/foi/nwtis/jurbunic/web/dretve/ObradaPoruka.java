@@ -37,9 +37,9 @@ import org.foi.nwtis.jurbunic.konfiguracije.bp.BP_Konfiguracija;
 public class ObradaPoruka extends Thread {
 
     //-----------REGEKSI----------------
-    final String regexADD = "^ADD IoT ([1-6]) \\\"([^\\\\s]+)\\\"GPS: ([0-9]{1,3}.[0-9]{6}), ([0-9]{1,3}.[0-9]{6});";
-    final String regexTEMP = "^TEMP IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) C:([0-9]{1,2})[.][0-9];$";
-    final String regexEVENT = "^EVENT IoT ([1-6]) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) F:([0-9]{1,2});$";
+    final String regexADD = "^ADD IoT ([0-9]{1,6}) \\\"([^\\\\s]+)\\\"GPS: ([0-9]{1,3}.[0-9]{6}),([0-9]{1,3}.[0-9]{6});";
+    final String regexTEMP = "^TEMP IoT ([0-9]{1,6}) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) C: ([0-9]{1,2})[.][0-9];$";
+    final String regexEVENT = "^EVENT IoT ([0-9]{1,6}) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) F: ([0-9]{1,2});$";
     //----------------------------------
     //-----------STATISTIKA-------------
     static Long obradaZapocela;
@@ -53,10 +53,7 @@ public class ObradaPoruka extends Thread {
     static int brojIzvrsenihEVENT;
     static int brojPogresaka;
     //----------------------------------
-    //------------ID baze---------------
-    private int uredajiId;
-    private int tempId;
-    //----------------------------------
+    
     private ServletContext sc = null;
     private boolean prekidObrade = false;
     BP_Konfiguracija bpkonf;
@@ -212,11 +209,11 @@ public class ObradaPoruka extends Thread {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         if (m.matches()) {
             Date datumKreiranja = new Date();
-            String sqlUpit = "SELECT naziv FROM uredaji WHERE naziv='"+m.group(2)+"'";
+            String sqlUpit = "SELECT id FROM uredaji WHERE id=" + m.group(1);
             if (bazaUpit(sqlUpit)) {
                 String sqlUnos = "INSERT INTO uredaji (id,naziv,latitude,longitude,status,vrijeme_promjene,vrijeme_kreiranja) VALUES "
-                        + "(" + 143 + ",'" + m.group(2) + "'," + m.group(3) + "," + m.group(4) + ","
-                        + m.group(1) + ",'" + sdf.format(datumKreiranja) + "','" + sdf.format(datumKreiranja) + "')";
+                        + "(" + m.group(1) + ",'" + m.group(2) + "'," + Float.parseFloat(m.group(3)) + "," + Float.parseFloat(m.group(4)) + ","
+                        + 0 + ",'" + sdf.format(datumKreiranja) + "','" + sdf.format(datumKreiranja) + "')";
                 unosUBazu(sqlUnos);
                 brojdodanihIOT++;
                 return true;
@@ -227,14 +224,41 @@ public class ObradaPoruka extends Thread {
         pattern = Pattern.compile(regexTEMP);
         m = pattern.matcher(cistaNaredba);
         if (m.matches()) {
-            brojMjerenihTEMP++;
-            return true;
+            String sqlUpit = "SELECT id FROM uredaji WHERE id=" + m.group(1);
+            if (!bazaUpit(sqlUpit)) {
+                String datumMjerenja = m.group(2)+"."+m.group(3)+"."+m.group(4)+" "
+                                      +m.group(5)+":"+m.group(6)+":"+m.group(7);
+                String datumZapisa = sdf.format(new Date());
+                String sqlUnos = "INSERT INTO temperature(id,temp,vrijeme_mjerenja,vrijeme_kreiranja) VALUES "
+                        + "(" + m.group(1) + ","+Float.parseFloat(m.group(8))+",'"+datumMjerenja+"','"+datumZapisa+"')";
+                unosUBazu(sqlUnos);
+                String sqlUnos1 = "UPDATE uredaji SET vrijeme_promjene='"+datumZapisa+"' WHERE id="+m.group(1);
+                unosUBazu(sqlUnos1);
+                brojMjerenihTEMP++;
+                return true;
+            }else{
+                return false;
+            }
         }
         pattern = Pattern.compile(regexEVENT);
         m = pattern.matcher(cistaNaredba);
         if (m.matches()) {
-            brojIzvrsenihEVENT++;
-            return true;
+            String sqlUpit = "SELECT id FROM uredaji WHERE id=" + m.group(1);
+            if(!bazaUpit(sqlUpit)){
+                String datumDogadaja = m.group(2)+"."+m.group(3)+"."+m.group(4)+" "
+                                      +m.group(5)+":"+m.group(6)+":"+m.group(7);
+                String datumZapisa = sdf.format(new Date());
+                String sqlUnos = "INSERT INTO dogadaji(id,vrsta,vrijeme_izvrsavanja,vrijeme_kreiranja) VALUES "
+                        + "("+Integer.parseInt(m.group(1))+","+Integer.parseInt(m.group(8))+",'"+datumDogadaja+"','"+datumZapisa+"')";
+                unosUBazu(sqlUnos);
+                String sqlUnos1 = "UPDATE uredaji SET vrijeme_promjene='"+datumZapisa+"' WHERE id="+m.group(1);
+                unosUBazu(sqlUnos1);
+                brojIzvrsenihEVENT++;
+                return true;
+            }
+            else{
+                return false;
+            }
         }
         return false;
     }
@@ -242,8 +266,9 @@ public class ObradaPoruka extends Thread {
     private boolean bazaUpit(String sqlNaredba) {
         try {
             Statement naredba = veza.createStatement();
-            ResultSet odgovor = naredba.executeQuery(sqlNaredba);           
+            ResultSet odgovor = naredba.executeQuery(sqlNaredba);
             if (!odgovor.next()) {
+                odgovor.beforeFirst();
                 return true;
             }
         } catch (SQLException ex) {
