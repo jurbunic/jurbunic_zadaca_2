@@ -18,17 +18,22 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.mail.Address;
 import javax.mail.Flags.Flag;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Store;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.ContentType;
+import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletContext;
 import org.foi.nwtis.jurbunic.konfiguracije.Konfiguracija;
 import org.foi.nwtis.jurbunic.konfiguracije.bp.BP_Konfiguracija;
+import org.foi.nwtis.jurbunic.web.zrna.SlanjePoruke;
 
 /**
  *
@@ -63,10 +68,10 @@ public class ObradaPoruka extends Thread {
     private Store store;
     private Folder folder;
     private Message[] messages;
+    private String folderNWTiS;
+    private String folderOther;
 
-    private ArrayList<Message> zaNWTiS_poruke = new ArrayList<>();
-    private ArrayList<Message> zaNWTiS_ostalo = new ArrayList<>();
-
+    private Konfiguracija konf;
     @Override
     public void interrupt() {
         prekidObrade = true;
@@ -75,12 +80,14 @@ public class ObradaPoruka extends Thread {
 
     @Override
     public void run() {
-        Konfiguracija konf = (Konfiguracija) sc.getAttribute("Mail_Konfig");
+        konf = (Konfiguracija) sc.getAttribute("Mail_Konfig");
         bpkonf = (BP_Konfiguracija) sc.getAttribute("BP_Konfig");
         String server = konf.dajPostavku("mail.server");
         String port = konf.dajPostavku("mail.port");
         String korisnik = konf.dajPostavku("mail.usernameThread");
         String lozinka = konf.dajPostavku("mail.passwordThread");
+        folderNWTiS = konf.dajPostavku("mail.folderNWTiS");
+        folderOther = konf.dajPostavku("mail.folderOther");
         trajanjeCiklusa = Long.parseLong(konf.dajPostavku("mail.timeSecThread"));
         trajanjeObrade = 0l;
         try {
@@ -91,27 +98,31 @@ public class ObradaPoruka extends Thread {
         spajanjeBaza();
         redniBrojCiklusa = 0;
         while (!prekidObrade) {
-
+            
             try {
                 Long pocetak = System.currentTimeMillis();
                 // Open the INBOX folder
                 folder = store.getFolder("INBOX");
                 folder.open(Folder.READ_WRITE);
+                brojPoruka = 0;
+                brojIzvrsenihEVENT = 0;
+                brojMjerenihTEMP = 0;
+                brojPogresaka = 0;
+                brojdodanihIOT = 0;
                 //----Citanje poruka----//                         
-                if (folder.hasNewMessages()) {
-                    brojPoruka = 0;
+                if (folder.hasNewMessages()) {                 
                     messages = folder.getMessages();
                     for (int i = 0; i < messages.length; ++i) {
                         MimeMessage message = (MimeMessage) messages[i];
                         brojPoruka++;
-                        if (message.getSubject().compareTo("NWTiS_poruke") == 0) {
+                        if (message.getSubject().compareTo(folderNWTiS) == 0) {
                             ContentType ct = new ContentType(message.getContentType());
                             if (ct.getBaseType().compareTo("TEXT/PLAIN") == 0) {
                                 if (obradaNaredbe(message.getContent().toString())) {
                                     System.out.println("Dobro");
                                     Message[] poruka = new Message[1];
                                     poruka[0] = messages[i];
-                                    store.getFolder("NWTiS_poruke").appendMessages(poruka);
+                                    store.getFolder(folderNWTiS).appendMessages(poruka);
 
                                 } else {
                                     brojPogresaka++;
@@ -121,11 +132,11 @@ public class ObradaPoruka extends Thread {
                                     store.getFolder("Spam").appendMessages(poruka);
                                 }
                             }
-                        } else if (message.getSubject().compareTo("NWTiS_ostalo") == 0) {
+                        } else if (message.getSubject().compareTo(folderOther) == 0) {
                             Message[] poruka = new Message[1];
                             poruka[0] = messages[i];
                             //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
-                            store.getFolder("NWTiS_ostalo").appendMessages(poruka);
+                            store.getFolder(folderOther).appendMessages(poruka);
                         } else {
                             Message[] poruka = new Message[1];
                             poruka[0] = messages[i];
@@ -139,10 +150,30 @@ public class ObradaPoruka extends Thread {
                 }
                 redniBrojCiklusa++;
                 System.out.println("ObradaPoruka" + redniBrojCiklusa);
-                //!---Citanje poruka---!//
+
                 trajanjeObrade = System.currentTimeMillis() - pocetak;
-                //TODO ovdje ide slanje maila statistike!
                 folder.close(true);
+                
+                //Statistika
+                SimpleDateFormat formater = new SimpleDateFormat("dd.MM.yyyy hh.mm.ss.SSS");
+                long zavrsetak = System.currentTimeMillis();
+                String poc = formater.format(new Date(pocetak));
+                String krj = formater.format(new Date(zavrsetak));
+                String statistika = "";
+                StringBuilder sb = new StringBuilder();
+                sb.append("\n")
+                        .append("Obrada započela u: ").append(poc).append("\n")
+                        .append("Obrada završila u: ").append(krj).append("\n")
+                        .append("\n")
+                        .append("Trajanje obrade u ms: ").append(trajanjeObrade).append("\n")
+                        .append("Broj poruka: ").append(brojPoruka).append("\n")
+                        .append("Broj dodanih IOT: ").append(brojdodanihIOT).append("\n")
+                        .append("Broj mjerenih TEMP: ").append(brojMjerenihTEMP).append("\n")
+                        .append("Broj izvršenih EVENT: ").append(brojIzvrsenihEVENT).append("\n")
+                        .append("Broj pogrešaka: ").append(brojPogresaka).append("\n");             
+                statistika = sb.toString();
+                saljiStatistiku(statistika);
+                
                 sleep(trajanjeCiklusa * 1000 - trajanjeObrade);
             } catch (InterruptedException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -153,7 +184,28 @@ public class ObradaPoruka extends Thread {
             }
         }
     }
-
+    
+    private void saljiStatistiku(String statistika){
+        try {
+            //TODO dodaj ovdje slanje poruke prema primjeru sa predavanja
+            Session session = Session.getDefaultInstance(System.getProperties());
+            MimeMessage message = new MimeMessage(session);            
+            Address fromAddress = new InternetAddress();
+            message.setFrom(fromAddress);
+            Address[] toAddresses = InternetAddress.parse(konf.dajPostavku("mail.usernameStatistics"));
+            message.setRecipients(Message.RecipientType.TO, toAddresses);
+            message.setSentDate(new Date());
+            message.setSubject(konf.dajPostavku("mail.subjectStatistics"));
+            message.setText(statistika);
+            Transport.send(message);
+            System.out.println(statistika);
+        } catch (AddressException ex) {
+            Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (MessagingException ex) {
+            Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
     @Override
     public synchronized void start() {
         super.start(); //To change body of generated methods, choose Tools | Templates.
@@ -188,12 +240,12 @@ public class ObradaPoruka extends Thread {
         // Connect to the store
         store = session.getStore("imap");
         store.connect(server, korisnik, lozinka);
-        if (!store.getFolder("NWTiS_poruke").exists()) {
-            folder = store.getFolder("NWTiS_poruke");
+        if (!store.getFolder(folderNWTiS).exists()) {
+            folder = store.getFolder(folderNWTiS);
             folder.create(Folder.HOLDS_MESSAGES);
         }
-        if (!store.getFolder("NWTiS_ostalo").exists()) {
-            folder = store.getFolder("NWTiS_ostalo");
+        if (!store.getFolder(folderOther).exists()) {
+            folder = store.getFolder(folderOther);
             folder.create(Folder.HOLDS_MESSAGES);
         }
         if (!store.getFolder("Spam").exists()) {

@@ -39,22 +39,27 @@ public class PregledPoruka {
     FacesContext ctx;
     Konfiguracija konf;
 
-    String posljuzitelj;
+    //----Podaci za konekciju-----
+    String posluzitelj;
     String korisnik;
     String lozinka;
+    int port;
+
+    //----------------------------
+    //-------Varijable za UI------
     String odabranaMapa;
     String traziPoruke;
-
     Integer ukupanBrojPORUKA = 0;
     Integer ukupanBrojMAPA = 0;
-
     Integer ukupnoPrikazano = 0;
     Integer pozicijaOd = 0;
     Integer pozicijaDo = 0;
-
-    Store store;
-
     private String trenutnaStranica;
+    //---------------------------
+    //---------Mail server-------
+    Store store;
+    String folderNWTiS;
+    String folderOther;
 
     public String getTrenutnaStranica() {
         return trenutnaStranica;
@@ -74,6 +79,8 @@ public class PregledPoruka {
         try {
             ctx = FacesContext.getCurrentInstance();
             dohvatiKonfiguraciju();
+            folderNWTiS = konf.dajPostavku("mail.folderNWTiS");
+            folderOther = konf.dajPostavku("mail.folderOther");
             preuzmiMape();
             preuzimPoruke();
         } catch (NemaKonfiguracije ex) {
@@ -87,19 +94,32 @@ public class PregledPoruka {
         try {
             java.util.Properties properties = System.getProperties();
             properties.put("mail.smtp.host", konf.dajPostavku("mail.server"));
-            //properties.put("mail.smtp.port", konf.dajPostavku("mail.port"));
-            //properties.put("mail.smtp.username", konf.dajPostavku("mail.usernameView"));
-            //properties.put("mail.smtp.password", konf.dajPostavku("mail.passwordView"));
+            korisnik = konf.dajPostavku("mail.usernameView");
+            lozinka = konf.dajPostavku("mail.passwordView");
+            port = Integer.parseInt(konf.dajPostavku("mail.port"));
+            posluzitelj = konf.dajPostavku("mail.server");
             Session session = Session.getInstance(properties, null);
             store = session.getStore("imap");
-            store.connect("127.0.0.1", 143, "servis@nwtis.nastava.foi.hr", "123456");
+            store.connect(posluzitelj, port, korisnik, lozinka);
+            trenutnaStranica = "0";
+            if (!store.getFolder(folderNWTiS).exists()) {
+                store.getFolder(folderNWTiS).create(Folder.HOLDS_MESSAGES);
+            }
+            if (!store.getFolder(folderOther).exists()) {
+                store.getFolder(folderOther).create(Folder.HOLDS_MESSAGES);
+            }
+            if (!store.getFolder("Spam").exists()) {
+                store.getFolder("Spam").create(Folder.HOLDS_MESSAGES);
+            }
+
             mape.add(new Izbornik(store.getFolder("INBOX").getFullName() + " - " + store.getFolder("INBOX").getMessageCount(), "INBOX"));
-            mape.add(new Izbornik(store.getFolder("NWTiS_poruke").getFullName() + " - " + store.getFolder("NWTiS_poruke").getMessageCount(), "NWTiS_poruke"));
-            mape.add(new Izbornik(store.getFolder("NWTiS_ostalo").getFullName() + " - " + store.getFolder("NWTiS_ostalo").getMessageCount(), "NWTiS_ostalo"));
+            mape.add(new Izbornik(store.getFolder(folderNWTiS).getFullName() + " - " + store.getFolder(folderNWTiS).getMessageCount(), folderNWTiS));
+            mape.add(new Izbornik(store.getFolder(folderOther).getFullName() + " - " + store.getFolder(folderOther).getMessageCount(), folderOther));
             mape.add(new Izbornik(store.getFolder("Spam").getFullName() + " - " + store.getFolder("Spam").getMessageCount(), "Spam"));
             ukupanBrojPORUKA += store.getFolder("Spam").getMessageCount()
-                    + store.getFolder("NWTiS_ostalo").getMessageCount()
-                    + store.getFolder("NWTiS_poruke").getMessageCount();
+                    + store.getFolder(folderOther).getMessageCount()
+                    + store.getFolder(folderNWTiS).getMessageCount()
+                    + store.getFolder("INBOX").getMessageCount();
 
         } catch (NoSuchProviderException ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -143,33 +163,68 @@ public class PregledPoruka {
                             (String) message.getContent(), message.getContentType());
                     poruke.add(poruka);
                 }
-                    
+
             } catch (MessagingException ex) {
                 Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
                 Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IndexOutOfBoundsException ex){
+            } catch (IndexOutOfBoundsException ex) {
                 return;
             }
-        
-        ukupanBrojMAPA = poruke.size();
-    }
-}
 
-public String promjenaMape() {
+            ukupanBrojMAPA = poruke.size();
+        }
+    }
+
+    public String promjenaMape() {
+        trenutnaStranica = "0";
         this.preuzimPoruke();
         return "PromjenaMape";
     }
 
     public String filtrirajPoruke() {
-        System.out.println("Neki tekst: "+traziPoruke);
+        //System.out.println("Neki tekst: " + traziPoruke);
         this.preuzimPoruke();
+        for (int i = 0; i < poruke.size(); i++) {
+            boolean podudaraSe = true;
+            Poruka poruka = poruke.get(i);
+            String polje = "";
+           // String polje =poruka.getId().replace("\\r\\n", ""); 
+           // if (polje.compareTo(traziPoruke) == 0) {
+           //     podudaraSe = false;
+           //     continue;
+           // }
+            polje = poruka.getSadrzaj().replaceAll("(\\r|\\n)", "");
+            if (polje.compareTo(traziPoruke) == 0) {
+                podudaraSe = false;
+                continue;
+            }
+            polje = poruka.getSalje().replaceAll("(\\r|\\n)", "");
+            if (polje.compareTo(traziPoruke) == 0) {
+                podudaraSe = false;
+                continue;
+            }
+            polje = poruka.getVrsta().replaceAll("(\\r|\\n)", "");
+            if (polje.compareTo(traziPoruke) == 0) {
+                continue;
+            }
+            if (podudaraSe) {
+                poruke.remove(poruka);
+                i--;
+            }
+        }
+
         return "FiltrirajPoruke";
     }
 
     public String prethodnePoruke() {
-        if(trenutnaStranica.isEmpty()){
+        if (trenutnaStranica.isEmpty()) {
             trenutnaStranica = "0";
+            return "prethodnePoruke";
+        }
+        if (trenutnaStranica.compareTo("0") == 0) {
+            this.preuzimPoruke();
+            return "prethodnePoruke";
         }
         Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
         String action = params.get("inkrementStranice");
@@ -180,8 +235,8 @@ public String promjenaMape() {
         return "prethodnePoruke";
     }
 
-    public String sljedecePoruke() {       
-        if(trenutnaStranica.isEmpty()){
+    public String sljedecePoruke() {
+        if (trenutnaStranica.isEmpty()) {
             trenutnaStranica = "0";
         }
         Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
@@ -192,8 +247,6 @@ public String promjenaMape() {
         this.preuzimPoruke();
         return "SljedecePoruke";
     }
-    
-    
 
     public String promjenaJezika() {
         return "promjenaJezika";
@@ -248,5 +301,5 @@ public String promjenaMape() {
                 + File.separator + ctx.getExternalContext().getInitParameter("konfiguracija");
         konf = KonfiguracijaApstraktna.preuzmiKonfiguraciju(datoteka);
     }
-    
+
 }
