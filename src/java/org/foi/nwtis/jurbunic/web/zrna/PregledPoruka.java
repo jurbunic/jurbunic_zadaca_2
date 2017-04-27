@@ -8,6 +8,7 @@ package org.foi.nwtis.jurbunic.web.zrna;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -82,6 +83,7 @@ public class PregledPoruka {
             folderNWTiS = konf.dajPostavku("mail.folderNWTiS");
             folderOther = konf.dajPostavku("mail.folderOther");
             preuzmiMape();
+            ukupnoPrikazano = Integer.parseInt(konf.dajPostavku("mail.numMessages"));
             preuzimPoruke();
         } catch (NemaKonfiguracije ex) {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
@@ -151,6 +153,7 @@ public class PregledPoruka {
                     pozicijaDo += Integer.parseInt(konf.dajPostavku("mail.numMessages"));
                 }
                 Message[] messages = folder.getMessages(pozicijaOd, pozicijaDo);
+                
                 for (int i = 0; i < messages.length; i++) {
 
                     MimeMessage message = (MimeMessage) messages[i];
@@ -163,7 +166,7 @@ public class PregledPoruka {
                             (String) message.getContent(), message.getContentType());
                     poruke.add(poruka);
                 }
-
+                Collections.reverse(poruke);
             } catch (MessagingException ex) {
                 Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
@@ -235,9 +238,12 @@ public class PregledPoruka {
         return "prethodnePoruke";
     }
 
-    public String sljedecePoruke() {
+    public String sljedecePoruke() throws MessagingException {
         if (trenutnaStranica.isEmpty()) {
             trenutnaStranica = "0";
+        }if(Integer.parseInt(trenutnaStranica)>(store.getFolder(odabranaMapa).getMessageCount()/ukupnoPrikazano)-1){
+            this.preuzimPoruke();
+            return "SljedecePoruke";
         }
         Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
         String action = params.get("inkrementStranice");
