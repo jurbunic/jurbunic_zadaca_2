@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import javax.inject.Named;
 import javax.enterprise.context.RequestScoped;
 import javax.faces.context.FacesContext;
+import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -56,6 +57,8 @@ public class PregledPoruka {
     Integer pozicijaOd = 0;
     Integer pozicijaDo = 0;
     private String trenutnaStranica;
+    private int stranicaUIod = 1;
+    private int stranicaUIdo = 1;
     //---------------------------
     //---------Mail server-------
     Store store;
@@ -144,26 +147,40 @@ public class PregledPoruka {
                 if (trenutnaStranica.isEmpty()) {
                     trenutnaStranica = "0";
                 }
-                pozicijaOd = ukupanBrojMAPA - Integer.parseInt(konf.dajPostavku("mail.numMessages")) * (Integer.valueOf(trenutnaStranica) + 1);
+                pozicijaOd = ukupanBrojMAPA - Integer.parseInt(konf.dajPostavku("mail.numMessages")) * (Integer.valueOf(trenutnaStranica) + 1) + 1;
                 pozicijaDo = ukupanBrojMAPA - Integer.parseInt(konf.dajPostavku("mail.numMessages")) * Integer.valueOf(trenutnaStranica);
+
                 if (pozicijaOd < 1) {
                     pozicijaOd = 1;
                 }
                 if (pozicijaDo < 1) {
                     pozicijaDo += Integer.parseInt(konf.dajPostavku("mail.numMessages"));
                 }
+                stranicaUIdo = ukupanBrojMAPA / Integer.parseInt(konf.dajPostavku("mail.numMessages"));
+                if (ukupanBrojMAPA % Integer.parseInt(konf.dajPostavku("mail.numMessages")) != 0) {
+                    stranicaUIdo++;
+                }
+                if(stranicaUIdo==0){
+                    stranicaUIdo=1;
+                }
                 Message[] messages = folder.getMessages(pozicijaOd, pozicijaDo);
-                
-                for (int i = 0; i < messages.length; i++) {
 
+                for (int i = 0; i < messages.length; i++) {
                     MimeMessage message = (MimeMessage) messages[i];
-                    String primatelji = "";
-                    for (int k = 0; k < message.getAllRecipients().length; k++) {
-                        primatelji += message.getAllRecipients()[k].toString();
+                    Address[] posiljatelj = message.getFrom();
+                    String salje = "";
+                    for (int k = 0; k < posiljatelj.length; k++) {
+                        salje += posiljatelj[k].toString();
                     }
-                    Poruka poruka = new Poruka(message.getContentID(), message.getSentDate(),
-                            message.getReceivedDate(), primatelji, message.getSubject(),
-                            (String) message.getContent(), message.getContentType());
+                    String tijelo = "";
+                    if (message.isMimeType("text/*")) {
+                        tijelo = (String) message.getContent();
+                    } else {
+                        tijelo = "Tijelo nije u text formatu!";
+                    }
+                    Poruka poruka = new Poruka(message.getMessageID(), message.getSentDate(),
+                            message.getReceivedDate(), salje, message.getSubject(),
+                            tijelo, message.getContentType());
                     poruke.add(poruka);
                 }
                 Collections.reverse(poruke);
@@ -186,32 +203,15 @@ public class PregledPoruka {
     }
 
     public String filtrirajPoruke() {
-        //System.out.println("Neki tekst: " + traziPoruke);
         this.preuzimPoruke();
         for (int i = 0; i < poruke.size(); i++) {
-            boolean podudaraSe = true;
+            boolean podudaraSe = false;
             Poruka poruka = poruke.get(i);
-            String polje = "";
-           // String polje =poruka.getId().replace("\\r\\n", ""); 
-           // if (polje.compareTo(traziPoruke) == 0) {
-           //     podudaraSe = false;
-           //     continue;
-           // }
-            polje = poruka.getSadrzaj().replaceAll("(\\r|\\n)", "");
-            if (polje.compareTo(traziPoruke) == 0) {
-                podudaraSe = false;
-                continue;
+            String polje = poruka.getSadrzaj().replaceAll("(\\r|\\n)", "");
+            if (polje.contains(traziPoruke)) {
+                podudaraSe = true;
             }
-            polje = poruka.getSalje().replaceAll("(\\r|\\n)", "");
-            if (polje.compareTo(traziPoruke) == 0) {
-                podudaraSe = false;
-                continue;
-            }
-            polje = poruka.getVrsta().replaceAll("(\\r|\\n)", "");
-            if (polje.compareTo(traziPoruke) == 0) {
-                continue;
-            }
-            if (podudaraSe) {
+            if (!podudaraSe) {
                 poruke.remove(poruka);
                 i--;
             }
@@ -229,11 +229,13 @@ public class PregledPoruka {
             this.preuzimPoruke();
             return "prethodnePoruke";
         }
+
         Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
         String action = params.get("inkrementStranice");
         int test1 = Integer.parseInt(trenutnaStranica);
         test1 -= Integer.parseInt(action);
         trenutnaStranica = String.valueOf(test1);
+        stranicaUIod = test1 + 1;
         this.preuzimPoruke();
         return "prethodnePoruke";
     }
@@ -241,17 +243,38 @@ public class PregledPoruka {
     public String sljedecePoruke() throws MessagingException {
         if (trenutnaStranica.isEmpty()) {
             trenutnaStranica = "0";
-        }if(Integer.parseInt(trenutnaStranica)>(store.getFolder(odabranaMapa).getMessageCount()/ukupnoPrikazano)-1){
-            this.preuzimPoruke();
-            return "SljedecePoruke";
         }
+        if (store.getFolder(odabranaMapa).getMessageCount() % ukupnoPrikazano != 0) {
+            if (Integer.parseInt(trenutnaStranica) > (store.getFolder(odabranaMapa).getMessageCount() / ukupnoPrikazano) - 1) {
+                stranicaUIod = Integer.parseInt(trenutnaStranica) + 1;
+                this.preuzimPoruke();
+                return "SljedecePoruke";
+            }
+            stranicenje(); 
+        } else {
+            if (Integer.parseInt(trenutnaStranica) >= (store.getFolder(odabranaMapa).getMessageCount() / ukupnoPrikazano) - 1) {
+                stranicaUIod = Integer.parseInt(trenutnaStranica) + 1;
+                this.preuzimPoruke();
+                return "SljedecePoruke";
+            }
+            stranicenje(); 
+        }
+
+        return "SljedecePoruke";
+    }
+
+    private void stranicenje() {
         Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
         String action = params.get("inkrementStranice");
         int test1 = Integer.parseInt(trenutnaStranica);
         test1 += Integer.parseInt(action);
         trenutnaStranica = String.valueOf(test1);
+        stranicaUIod = test1 + 1;
+
         this.preuzimPoruke();
-        return "SljedecePoruke";
+        if (stranicaUIod > stranicaUIdo) {
+            stranicaUIod--;
+        }
     }
 
     public String promjenaJezika() {
@@ -300,6 +323,22 @@ public class PregledPoruka {
 
     public void setOdabranaMapa(String odabranaMapa) {
         this.odabranaMapa = odabranaMapa;
+    }
+
+    public int getStranicaUIod() {
+        return stranicaUIod;
+    }
+
+    public int getStranicaUIdo() {
+        return stranicaUIdo;
+    }
+
+    public void setPozicijaOd(Integer pozicijaOd) {
+        this.pozicijaOd = pozicijaOd;
+    }
+
+    public void setPozicijaDo(Integer pozicijaDo) {
+        this.pozicijaDo = pozicijaDo;
     }
 
     private void dohvatiKonfiguraciju() throws NemaKonfiguracije, NeispravnaKonfiguracija {

@@ -11,9 +11,11 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -47,6 +49,7 @@ public class ObradaPoruka extends Thread {
     final String regexEVENT = "^EVENT IoT ([0-9]{1,6}) T: ([0-9]{4})[.]([0-9]{2})[.]([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) F: ([0-9]{1,2});$";
     //----------------------------------
     //-----------STATISTIKA-------------
+    static int brojStatistike;
     static Long obradaZapocela;
     static Long obradaZavrsila;
     static Long trajanjeObrade;
@@ -132,17 +135,11 @@ public class ObradaPoruka extends Thread {
                                     store.getFolder("Spam").appendMessages(poruka);
                                 }
                             }
-                        } else if (message.getSubject().compareTo(folderOther) == 0) {
-                            Message[] poruka = new Message[1];
-                            poruka[0] = messages[i];
-                            //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
-                            store.getFolder(folderOther).appendMessages(poruka);
                         } else {
                             Message[] poruka = new Message[1];
                             poruka[0] = messages[i];
                             //folder.setFlags(poruka, new Flags(Flag.SEEN), true);
-                            store.getFolder("Spam").appendMessages(poruka);
-                            System.out.println("U spam!");
+                            store.getFolder(folderOther).appendMessages(poruka);
                         }
                         messages[i].setFlag(Flag.DELETED, true);
                         // TODO dovršiti čitanje, obradu i prebacivanje u mape
@@ -173,8 +170,12 @@ public class ObradaPoruka extends Thread {
                         .append("Broj pogrešaka: ").append(brojPogresaka).append("\n");             
                 statistika = sb.toString();
                 saljiStatistiku(statistika);
-                
-                sleep(trajanjeCiklusa * 1000 - trajanjeObrade);
+                long preostaloSpavanje = trajanjeCiklusa * 1000 - trajanjeObrade;
+                if(preostaloSpavanje < 0){
+                    preostaloSpavanje *= -1;
+                    preostaloSpavanje = (preostaloSpavanje % 1000);
+                }
+                sleep(preostaloSpavanje);
             } catch (InterruptedException ex) {
                 Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
             } catch (MessagingException ex) {
@@ -187,15 +188,15 @@ public class ObradaPoruka extends Thread {
     
     private void saljiStatistiku(String statistika){
         try {
-            //TODO dodaj ovdje slanje poruke prema primjeru sa predavanja
             Session session = Session.getDefaultInstance(System.getProperties());
             MimeMessage message = new MimeMessage(session);            
-            Address fromAddress = new InternetAddress();
+            Address fromAddress = new InternetAddress("servis@nwtis.nastava.foi.hr");
             message.setFrom(fromAddress);
             Address[] toAddresses = InternetAddress.parse(konf.dajPostavku("mail.usernameStatistics"));
             message.setRecipients(Message.RecipientType.TO, toAddresses);
             message.setSentDate(new Date());
-            message.setSubject(konf.dajPostavku("mail.subjectStatistics"));
+            brojStatistike++;
+            message.setSubject(konf.dajPostavku("mail.subjectStatistics")+" - "+NumberFormat.getNumberInstance(Locale.GERMANY).format(brojStatistike));
             message.setText(statistika);
             Transport.send(message);
             System.out.println(statistika);

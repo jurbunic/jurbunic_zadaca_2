@@ -3,19 +3,21 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="http://xmlns.jcp.org/jsf/html"
       xmlns:f="http://xmlns.jcp.org/jsf/core">
-    <f:view locale="#{lokalizator.odabraniJezik}">
+    <f:view locale="#{lokalizator.odabraniJezik}">      
         <h:head>
+            <link rel="stylesheet" type="text/css" href="style.css"></link>
             <title>#{m.index_naslov}</title>
         </h:head>
+        
         <h:body>
             <h:form>
                 <h:selectOneRadio value="#{lokalizator.odabraniJezik}">
                     <f:selectItems value="#{lokalizator.izbornikJezika}"
                                    var="j" itemLabel="#{j.labela}"
                                    itemValue="#{j.vrijednost}" />
-                    <h:commandButton value="#{m.index_promjena}" action="#{lokalizator.odaberiJezik}" /><br/>
-                </h:selectOneRadio>
-                <h:commandLink value="#{m.index_saljiPoruku}" action="#{lokalizator.saljiPoruku()}"/><br/>
+                    <h:commandButton value="#{m.index_promjena}" action="#{lokalizator.odaberiJezik}" class="btn-primary" /><br/>
+                </h:selectOneRadio><br/><br/>
+                <h:commandLink value="#{m.index_saljiPoruku}" action="#{lokalizator.saljiPoruku()}"/><br/><br/>
                 <h:commandLink value="#{m.index_pregledPoruka}" action="#{lokalizator.pregledPoruka()}"/>
             </h:form>
         </h:body>

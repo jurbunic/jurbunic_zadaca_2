@@ -5,6 +5,7 @@
       xmlns:f="http://xmlns.jcp.org/jsf/core">
     <f:view locale="#{lokalizator.odabraniJezik}">
         <h:head>
+            <link rel="stylesheet" type="text/css" href="style.css"></link>
             <title>#{m.slanjePoruke_naslov}</title>
         </h:head>
         <h:body>
@@ -18,7 +19,7 @@
                 <h:outputLabel value="#{m.slanjePoruke_sadrzaj}"/>: 
                 <h:inputTextarea value="#{slanjePoruke.sadrzaj}" cols="60" rows="10"/><br/>
                 <h:commandButton value="#{m.slanjePoruke_gumbSalji}" action="#{slanjePoruke.saljiPoruku()}"/>   <br/>
-
+                <h:outputLabel value="#{slanjePoruke.poruka}"/><br/>
                 <h:commandLink value="#{m.slanjePoruke_promjena}" action="#{slanjePoruke.promjenaJezika()}"/> <br/>
                 <h:commandLink value="#{m.slanjePoruke_pregledPoruka}" action="#{slanjePoruke.pregledPoruka()}"/>
             </h:form>

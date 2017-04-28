@@ -36,6 +36,11 @@ public class SlanjePoruke {
     String predmet;
     String sadrzaj;
 
+    String poruka;
+
+    public String getPoruka() {
+        return poruka;
+    }
     /**
      * Creates a new instance of SlanjePoruke
      */
@@ -56,9 +61,12 @@ public class SlanjePoruke {
             message.setSubject(predmet);
             message.setText(sadrzaj);
             Transport.send(message);
+            poruka = "Uspješno slanje emaila";
         } catch (AddressException ex) {
+            poruka = "Neispravna adresa!";
             Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MessagingException ex) {
+            poruka = "Pogreška kod slanja!";
             Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
         }
         return "PoslanaPoruka";
