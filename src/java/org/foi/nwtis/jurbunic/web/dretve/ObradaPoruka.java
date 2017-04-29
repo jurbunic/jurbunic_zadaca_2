@@ -295,7 +295,9 @@ public class ObradaPoruka extends Thread {
                 String sqlUnos = "INSERT INTO uredaji (id,naziv,latitude,longitude,status,vrijeme_promjene,vrijeme_kreiranja) VALUES "
                         + "(" + m.group(1) + ",'" + m.group(2) + "'," + Float.parseFloat(m.group(3)) + "," + Float.parseFloat(m.group(4)) + ","
                         + 0 + ",'" + sdf.format(datumKreiranja) + "','" + sdf.format(datumKreiranja) + "')";
-                unosUBazu(sqlUnos);
+                if(unosUBazu(sqlUnos)==false){
+                    return false;
+                }
                 brojdodanihIOT++;
                 return true;
             } else {
@@ -312,9 +314,13 @@ public class ObradaPoruka extends Thread {
                 String datumZapisa = sdf.format(new Date());
                 String sqlUnos = "INSERT INTO temperature(id,temp,vrijeme_mjerenja,vrijeme_kreiranja) VALUES "
                         + "(" + m.group(1) + ","+Float.parseFloat(m.group(8))+",'"+datumMjerenja+"','"+datumZapisa+"')";
-                unosUBazu(sqlUnos);
+                if(unosUBazu(sqlUnos)==false){
+                    return false;
+                }
                 String sqlUnos1 = "UPDATE uredaji SET vrijeme_promjene='"+datumZapisa+"' WHERE id="+m.group(1);
-                unosUBazu(sqlUnos1);
+                if(unosUBazu(sqlUnos1)==false){
+                    return false;
+                }
                 brojMjerenihTEMP++;
                 return true;
             }else{
@@ -331,9 +337,13 @@ public class ObradaPoruka extends Thread {
                 String datumZapisa = sdf.format(new Date());
                 String sqlUnos = "INSERT INTO dogadaji(id,vrsta,vrijeme_izvrsavanja,vrijeme_kreiranja) VALUES "
                         + "("+Integer.parseInt(m.group(1))+","+Integer.parseInt(m.group(8))+",'"+datumDogadaja+"','"+datumZapisa+"')";
-                unosUBazu(sqlUnos);
+                if(unosUBazu(sqlUnos)==false){
+                    return false;
+                }
                 String sqlUnos1 = "UPDATE uredaji SET vrijeme_promjene='"+datumZapisa+"' WHERE id="+m.group(1);
-                unosUBazu(sqlUnos1);
+                if(unosUBazu(sqlUnos1)==false){
+                    return false;
+                }
                 brojIzvrsenihEVENT++;
                 return true;
             }
@@ -365,16 +375,22 @@ public class ObradaPoruka extends Thread {
     }
 
     /**
-     * Metoda služi za unos podataka u bazu podataka. 
-     * @param sqlNaredba SQL naredba (INSERT, UPDATE, DELETE)
+     * Metoda služi za unos retka u bazu podataka
+     * @param sqlNaredba
+     * @return 
      */
-    private void unosUBazu(String sqlNaredba) {
+    private boolean unosUBazu(String sqlNaredba) {
         try {
             Statement naredba = veza.createStatement();
             naredba.executeUpdate(sqlNaredba);
+                
+            
+            
         } catch (SQLException ex) {
-            Logger.getLogger(ObradaPoruka.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("pogreška: "+ex);
+            return false;
         }
+        return true;
     }
 
 }

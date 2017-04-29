@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.inject.Named;
 import javax.enterprise.context.RequestScoped;
+import javax.faces.component.UIViewRoot;
 import javax.faces.context.FacesContext;
 import javax.mail.Address;
 import javax.mail.Folder;
@@ -148,11 +149,17 @@ public class PregledPoruka {
      * klase Poruka, te zatim u listu
      */
     void preuzimPoruke() {
-
-        if (odabranaMapa == null) {
-            odabranaMapa = mape.get(0).getVrijednost();
+        UIViewRoot view = FacesContext.getCurrentInstance().getViewRoot();
+        if (view == null) {
+            
+            return;
+            //odabranaMapa = mape.get(0).getVrijednost();
         } else {
             try {
+                poruke.clear();
+                if(odabranaMapa == null){
+                    odabranaMapa = mape.get(0).getVrijednost();
+                }
                 Folder folder = store.getFolder(odabranaMapa);
                 folder.open(Folder.READ_ONLY);
                 ukupanBrojMAPA = folder.getMessageCount();
