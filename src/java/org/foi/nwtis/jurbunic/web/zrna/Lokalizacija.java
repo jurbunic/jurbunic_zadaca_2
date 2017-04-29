@@ -16,7 +16,7 @@ import org.foi.nwtis.jurbunic.web.kontrole.Izbornik;
 
 /**
  *
- * @author grupa_1
+ * @author Jurica Bunić
  */
 @Named(value = "lokalizator")
 @SessionScoped

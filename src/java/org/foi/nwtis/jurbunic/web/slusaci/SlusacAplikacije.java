@@ -21,7 +21,7 @@ import org.foi.nwtis.jurbunic.web.dretve.ObradaPoruka;
 /**
  * Web application lifecycle listener.
  *
- * @author grupa_1
+ * @author Jurica Bunić
  */
 @WebListener
 public class SlusacAplikacije implements ServletContextListener {

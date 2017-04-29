@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.PostConstruct;
 import javax.inject.Named;
 import javax.enterprise.context.RequestScoped;
 import javax.faces.context.FacesContext;
@@ -32,7 +33,7 @@ import org.foi.nwtis.jurbunic.web.kontrole.Poruka;
 
 /**
  *
- * @author grupa_1
+ * @author Jurica Bunić
  */
 @Named(value = "pregledPoruka")
 @RequestScoped
@@ -59,6 +60,8 @@ public class PregledPoruka {
     private String trenutnaStranica;
     private int stranicaUIod = 1;
     private int stranicaUIdo = 1;
+    private boolean naprijedGumb=false;
+    private boolean natragGumb=false;
     //---------------------------
     //---------Mail server-------
     Store store;
@@ -95,6 +98,12 @@ public class PregledPoruka {
         }
     }
 
+    /**
+     * Metoda služi za preuzimanje mapa sa mail servera.
+     * Metoda se spaja na mail server sa parametrima definiranima u konfiguracijskoj
+     * datoteci. Nakon spajanja provjerava se postoje li mape za spojenog korisnika.
+     * Ako ne postoje, kreiraju se, te izračunava ukupan broj poruka za korisnika.
+     */
     void preuzmiMape() {
         try {
             java.util.Properties properties = System.getProperties();
@@ -132,13 +141,16 @@ public class PregledPoruka {
             Logger.getLogger(PregledPoruka.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
+    /**
+     * Metoda služi za preuzimanje poruka sa mail servera.
+     * Dohvać se odabrana mapa te se računaju pozicije od - do koje će se preuzeti poruke
+     * Nakon što se poruka dohvati, informacije unutar dohvaćene poruke se spremaju u objekte
+     * klase Poruka, te zatim u listu
+     */
     void preuzimPoruke() {
 
-        //TODO promjeni sa stavrnim preuzimanjem poruka!
-        //TODO razmisli o optimiranju preuzimanja poruka!
         if (odabranaMapa == null) {
-            return;
+            odabranaMapa = mape.get(0).getVrijednost();
         } else {
             try {
                 Folder folder = store.getFolder(odabranaMapa);
@@ -164,7 +176,6 @@ public class PregledPoruka {
                     stranicaUIdo=1;
                 }
                 Message[] messages = folder.getMessages(pozicijaOd, pozicijaDo);
-
                 for (int i = 0; i < messages.length; i++) {
                     MimeMessage message = (MimeMessage) messages[i];
                     Address[] posiljatelj = message.getFrom();
@@ -191,7 +202,12 @@ public class PregledPoruka {
             } catch (IndexOutOfBoundsException ex) {
                 return;
             }
-
+            if(stranicaUIod == 1){
+               natragGumb = true;
+            }
+            if(stranicaUIdo <= stranicaUIod){
+                naprijedGumb = true;
+            }
             ukupanBrojMAPA = poruke.size();
         }
     }
@@ -202,6 +218,11 @@ public class PregledPoruka {
         return "PromjenaMape";
     }
 
+    /**
+     * Metoda prvo preuzima poruke, te nakon preuzimanja, nad preuzetim porukama
+     * provodi pretraživanje nad sadržajem
+     * @return "FiltrirajPoruke"
+     */
     public String filtrirajPoruke() {
         this.preuzimPoruke();
         for (int i = 0; i < poruke.size(); i++) {
@@ -219,7 +240,11 @@ public class PregledPoruka {
 
         return "FiltrirajPoruke";
     }
-
+    /**
+     * Metoda služi za dohvaćanje poruka na prethodnoj stranici ( ako se je moguće
+     * prebaciti na prethodnu stranicu ) 
+     * @return 
+     */
     public String prethodnePoruke() {
         if (trenutnaStranica.isEmpty()) {
             trenutnaStranica = "0";
@@ -239,7 +264,13 @@ public class PregledPoruka {
         this.preuzimPoruke();
         return "prethodnePoruke";
     }
-
+    /**
+     * Metoda se koristi kod dohvaćanja poruka na sljedećoj stranici (ako je moguće).
+     * Ako je ukupno poruka u mapi, podijeljeno sa brojem poruka koje se smiju prikazati nije cijeli broj
+     * tada se koristi prvi slućaj, a inače se izvršava else;
+     * @return
+     * @throws MessagingException 
+     */
     public String sljedecePoruke() throws MessagingException {
         if (trenutnaStranica.isEmpty()) {
             trenutnaStranica = "0";
@@ -262,7 +293,12 @@ public class PregledPoruka {
 
         return "SljedecePoruke";
     }
-
+    /**
+     * Metoda koja se koristi kod prebacivanja na sljedeću stranicu
+     * Dohvaća se parametar koji predstavlja inkrement ( +1) te se zatim dohvaća
+     * vrijednost sa stranice (trenutnaStranica - hidden input na stranici) koja
+     * se zatim povećava za 1, te se zatim preuzimaju poruke sa novim indeksima.
+     */
     private void stranicenje() {
         Map<String, String> params = ctx.getExternalContext().getRequestParameterMap();
         String action = params.get("inkrementStranice");
@@ -341,6 +377,28 @@ public class PregledPoruka {
         this.pozicijaDo = pozicijaDo;
     }
 
+    public boolean isNaprijedGumb() {
+        return naprijedGumb;
+    }
+
+    public void setNaprijedGumb(boolean naprijedGumb) {
+        this.naprijedGumb = naprijedGumb;
+    }
+
+    public boolean isNatragGumb() {
+        return natragGumb;
+    }
+
+    public void setNatragGumb(boolean natragGumb) {
+        this.natragGumb = natragGumb;
+    }
+    
+    /**
+     * Dohvaćanje konfiguracije
+     * 
+     * @throws NemaKonfiguracije
+     * @throws NeispravnaKonfiguracija 
+     */
     private void dohvatiKonfiguraciju() throws NemaKonfiguracije, NeispravnaKonfiguracija {
         String datoteka = ctx.getExternalContext().getRealPath("/WEB-INF")
                 + File.separator + ctx.getExternalContext().getInitParameter("konfiguracija");

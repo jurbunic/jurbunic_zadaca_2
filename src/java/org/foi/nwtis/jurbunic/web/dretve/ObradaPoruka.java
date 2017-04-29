@@ -13,7 +13,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.logging.Level;
@@ -39,7 +38,7 @@ import org.foi.nwtis.jurbunic.web.zrna.SlanjePoruke;
 
 /**
  *
- * @author grupa_1
+ * @author Jurica Bunić
  */
 public class ObradaPoruka extends Thread {
 
@@ -185,12 +184,18 @@ public class ObradaPoruka extends Thread {
             }
         }
     }
+    /**
+     * Funkcija saljiStatistiku prima jedan parametar koji predstavlja tijelo email poruke.
+     * Poruka se šalje sa adrese koja je definirana u konfiguraciji. Sadržaj poruke se ispisuje
+     * u konzolu nakon slanja poruke
+     * @param statistika 
+     */
     
     private void saljiStatistiku(String statistika){
         try {
             Session session = Session.getDefaultInstance(System.getProperties());
             MimeMessage message = new MimeMessage(session);            
-            Address fromAddress = new InternetAddress("servis@nwtis.nastava.foi.hr");
+            Address fromAddress = new InternetAddress(konf.dajPostavku("mail.usernameThread"));
             message.setFrom(fromAddress);
             Address[] toAddresses = InternetAddress.parse(konf.dajPostavku("mail.usernameStatistics"));
             message.setRecipients(Message.RecipientType.TO, toAddresses);
@@ -216,6 +221,10 @@ public class ObradaPoruka extends Thread {
         this.sc = sc;
     }
 
+    /**
+     * Metoda spajanjeBaza služi za spajanje na bazu podataka koja je definirana u konfiguracijskoj
+     * datoteci. 
+     */
     private void spajanjeBaza() {
         try {
             Class.forName(bpkonf.getDriverDatabase());
@@ -233,6 +242,17 @@ public class ObradaPoruka extends Thread {
 
     }
 
+    /**
+     * spajanjeMail se koristi kod povezivanja na mail server. Prima četiri parametra
+     * Uz spajanje na mail server, provjerava se postoje li mape koje su definirane u
+     * konfiguracijskoj datoteci
+     * 
+     * @param server - adresa mail poslužitelja
+     * @param port - port na mail poslužitelju
+     * @param korisnik - korisničko ime korisnika koji se prijavljuje na server
+     * @param lozinka lozinka korisnika koji se prijavljuje na server
+     * @throws MessagingException 
+     */
     private void spajanjeMail(String server, String port, String korisnik, String lozinka) throws MessagingException {
         // Start the session
         java.util.Properties properties = System.getProperties();
@@ -240,7 +260,7 @@ public class ObradaPoruka extends Thread {
         session = Session.getInstance(properties, null);
         // Connect to the store
         store = session.getStore("imap");
-        store.connect(server, korisnik, lozinka);
+        store.connect(server,Integer.parseInt(port), korisnik, lozinka);
         if (!store.getFolder(folderNWTiS).exists()) {
             folder = store.getFolder(folderNWTiS);
             folder.create(Folder.HOLDS_MESSAGES);
@@ -255,6 +275,14 @@ public class ObradaPoruka extends Thread {
         }
     }
 
+    /**
+     * Funkcija prima naredbu i provjerava ispravnost naredbe prema definiranim 
+     * regexima. Ukoliko je naredba ispravna provjerava se preko funkcije bazaUpit(sqlUpit)
+     * dali postoji zadani IoT uređaj u bazi. Ako je sve ispravno u bazu se upisuje novi redak
+     * 
+     * @param naredba naredba koja je dobivena u email poruci
+     * @return true - ako je naredba ispravna, false - ako naredba nije ispravna
+     */
     private boolean obradaNaredbe(String naredba) {
         String cistaNaredba = naredba.replaceAll("(\\r|\\n)", "");
         Pattern pattern = Pattern.compile(regexADD);
@@ -315,7 +343,13 @@ public class ObradaPoruka extends Thread {
         }
         return false;
     }
-
+    /**
+     * funkcija služi za provjeru vraća li zadani SQL upit barem jedan redak. Ako
+     * vraća tada funkcija vraća vrijednost false, a ako upit ne vraća ni jedan 
+     * redak tada funkcija vraća true
+     * @param sqlNaredba SQL naredba (SELECT) 
+     * @return 
+     */
     private boolean bazaUpit(String sqlNaredba) {
         try {
             Statement naredba = veza.createStatement();
@@ -330,6 +364,10 @@ public class ObradaPoruka extends Thread {
         return false;
     }
 
+    /**
+     * Metoda služi za unos podataka u bazu podataka. 
+     * @param sqlNaredba SQL naredba (INSERT, UPDATE, DELETE)
+     */
     private void unosUBazu(String sqlNaredba) {
         try {
             Statement naredba = veza.createStatement();

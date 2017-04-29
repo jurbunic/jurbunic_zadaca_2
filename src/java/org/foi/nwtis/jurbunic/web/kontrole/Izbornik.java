@@ -7,7 +7,7 @@ package org.foi.nwtis.jurbunic.web.kontrole;
 
 /**
  *
- * @author grupa_1
+ * @author Jurica Bunić
  */
 public class Izbornik {
     String labela;

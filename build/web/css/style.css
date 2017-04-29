@@ -27,6 +27,7 @@ body {
 input.btn-primary {
     background-color: white;
     color: blue;
+    margin-left: 3px
 }
 
 a {

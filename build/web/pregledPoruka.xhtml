@@ -5,22 +5,22 @@
       xmlns:f="http://xmlns.jcp.org/jsf/core">
     <f:view locale="#{lokalizator.odabraniJezik}">
         <h:head>
-            <link rel="stylesheet" type="text/css" href="style.css"></link>
+            <link rel="stylesheet" type="text/css" href="css/style.css"></link>
             <title>#{m.pregledPoruka_naslov}</title>
         </h:head>
         <h:body>
             <h:form>
                 <h:commandLink value="#{m.pregledPoruka_promjenaJezika}" action="#{pregledPoruka.promjenaJezika()}"/> <br/>
-                <h:commandLink value="#{m.pregledPoruka_slanjeEmailPoruke}" action="#{pregledPoruka.saljiPoruku()}"/>
+                <h:commandLink value="#{m.pregledPoruka_slanjeEmailPoruke}" action="#{pregledPoruka.saljiPoruku()}"/> <br/><br/>
 
                 <h:outputLabel value="#{m.pregledPoruka_gumbPromjeniMapu}"/>:
                 <h:selectOneMenu value="#{pregledPoruka.odabranaMapa}">
                     <f:selectItems value="#{pregledPoruka.mape}" var="f" itemLabel="#{f.labela}" itemValue="#{f.vrijednost}"/>
                 </h:selectOneMenu>
-                <h:commandButton value="#{m.pregledPoruka_gumbPromjeniMapu}" action="#{pregledPoruka.promjenaMape()}" /><br/>
+                <h:commandButton class="btn-primary" value="#{m.pregledPoruka_gumbPromjeniMapu}" action="#{pregledPoruka.promjenaMape()}" /><br/><br/>
                 <h:outputLabel value="#{m.pregledPoruka_trazi}" />:
-                <h:inputText value="#{pregledPoruka.traziPoruke}" /><br/>
-                <h:commandButton value="#{m.pregledPoruka_gumbTrazi}" action="#{pregledPoruka.filtrirajPoruke()}"/><br/>
+                <h:inputText value="#{pregledPoruka.traziPoruke}" />  
+                <h:commandButton class="btn-primary" value="#{m.pregledPoruka_gumbTrazi}" action="#{pregledPoruka.filtrirajPoruke()}"/><br/><br/>
                 <h:dataTable border="1" value="#{pregledPoruka.poruke}" var="p" >
                     <h:column>
                         <f:facet name="header">ID</f:facet>
@@ -45,11 +45,11 @@
                 </h:dataTable>
                 <h:outputText value="#{pregledPoruka.stranicaUIod}"/>/<h:outputText value="#{pregledPoruka.stranicaUIdo}" /><br/>
                 <h:outputText value="#{m.pregledPoruka_ukupnoPoruka}"/>: <h:outputText value="#{pregledPoruka.ukupanBrojPORUKA}"/><br/>
-                <h:commandButton value="#{m.pregledPoruka_gumbPrethodnePoruke}" action="#{pregledPoruka.prethodnePoruke()}" >
+                <h:commandButton class="btn-primary" value="#{m.pregledPoruka_gumbPrethodnePoruke}" action="#{pregledPoruka.prethodnePoruke()}" disabled="#{pregledPoruka.natragGumb}" >
                     <f:param name="inkrementStranice" value="1"/>
                 </h:commandButton>
                 <h:inputHidden value="#{pregledPoruka.trenutnaStranica}"/>
-                <h:commandButton value="#{m.pregledPoruka_gumbSljedecePoruke}" action="#{pregledPoruka.sljedecePoruke()}" >
+                <h:commandButton class="btn-primary" value="#{m.pregledPoruka_gumbSljedecePoruke}" action="#{pregledPoruka.sljedecePoruke()}" disabled="#{pregledPoruka.naprijedGumb}" >
                     <f:param name="inkrementStranice" value="1"/>
                 </h:commandButton>
             </h:form>

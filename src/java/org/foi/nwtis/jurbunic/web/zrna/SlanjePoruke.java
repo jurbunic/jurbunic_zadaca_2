@@ -6,7 +6,6 @@
 package org.foi.nwtis.jurbunic.web.zrna;
 
 import java.util.Date;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
@@ -20,11 +19,10 @@ import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import javax.swing.JOptionPane;
 
 /**
  *
- * @author grupa_1
+ * @author Jurica Bunić
  */
 @Named(value = "slanjePoruke")
 @RequestScoped
@@ -47,7 +45,13 @@ public class SlanjePoruke {
     public SlanjePoruke() {
 
     }
-
+    /**
+     * Poruka se šalje na unešenu adresu, te ako je uspješno, tada se ispisuje na stranicu
+     * poruka "Uspješno slanje emaila" inače se ispisuje poruke u obradi iznimke 
+     * 
+     * @return
+     * @throws NoSuchProviderException 
+     */
     public String saljiPoruku() throws NoSuchProviderException {
         try {
             //TODO dodaj ovdje slanje poruke prema primjeru sa predavanja
