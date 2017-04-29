@@ -19,6 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.faces.context.FacesContext;
 import javax.mail.Address;
 import javax.mail.Flags.Flag;
 import javax.mail.Folder;
@@ -72,7 +73,6 @@ public class ObradaPoruka extends Thread {
     private Message[] messages;
     private String folderNWTiS;
     private String folderOther;
-
     private Konfiguracija konf;
     @Override
     public void interrupt() {
@@ -82,6 +82,8 @@ public class ObradaPoruka extends Thread {
 
     @Override
     public void run() {
+        sc.setAttribute("greska", "");
+        sc.setAttribute("objavi", false);
         konf = (Konfiguracija) sc.getAttribute("Mail_Konfig");
         bpkonf = (BP_Konfiguracija) sc.getAttribute("BP_Konfig");
         String server = konf.dajPostavku("mail.server");
@@ -111,8 +113,10 @@ public class ObradaPoruka extends Thread {
                 brojMjerenihTEMP = 0;
                 brojPogresaka = 0;
                 brojdodanihIOT = 0;
-                //----Citanje poruka----//                         
-                if (folder.hasNewMessages()) {                 
+                //----Citanje poruka----//
+                sc.setAttribute("greska", "");
+                sc.setAttribute("objavi", false);
+                if (folder.hasNewMessages()) {       
                     messages = folder.getMessages();
                     for (int i = 0; i < messages.length; ++i) {
                         MimeMessage message = (MimeMessage) messages[i];
@@ -124,10 +128,13 @@ public class ObradaPoruka extends Thread {
                                     System.out.println("Dobro");
                                     Message[] poruka = new Message[1];
                                     poruka[0] = messages[i];
-                                    store.getFolder(folderNWTiS).appendMessages(poruka);
+                                    sc.setAttribute("greska", "Ispravna naredba");
+                                    sc.setAttribute("objavi", true);
 
                                 } else {
                                     brojPogresaka++;
+                                    sc.setAttribute("greska", "neispravna naredba");
+                                    sc.setAttribute("objavi", true);
                                     System.out.println("Nije dobro");
                                     Message[] poruka = new Message[1];
                                     poruka[0] = messages[i];
@@ -144,9 +151,6 @@ public class ObradaPoruka extends Thread {
                         // TODO dovršiti čitanje, obradu i prebacivanje u mape
                     }
                 }
-                redniBrojCiklusa++;
-                System.out.println("ObradaPoruka" + redniBrojCiklusa);
-
                 trajanjeObrade = System.currentTimeMillis() - pocetak;
                 folder.close(true);
                 
@@ -203,7 +207,7 @@ public class ObradaPoruka extends Thread {
             brojStatistike++;
             message.setSubject(konf.dajPostavku("mail.subjectStatistics")+" - "+NumberFormat.getNumberInstance(Locale.GERMANY).format(brojStatistike));
             message.setText(statistika);
-            Transport.send(message);
+            //Transport.send(message);
             System.out.println(statistika);
         } catch (AddressException ex) {
             Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
@@ -338,6 +342,7 @@ public class ObradaPoruka extends Thread {
                 return true;
             }
             else{
+                sc.getAttribute("greska");
                 return false;
             }
         }

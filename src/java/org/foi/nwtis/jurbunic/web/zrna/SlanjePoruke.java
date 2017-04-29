@@ -10,6 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.inject.Named;
 import javax.enterprise.context.RequestScoped;
+import javax.faces.context.FacesContext;
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -19,6 +20,7 @@ import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import javax.servlet.ServletContext;
 
 /**
  *
@@ -35,7 +37,9 @@ public class SlanjePoruke {
     String sadrzaj;
 
     String poruka;
-
+    ServletContext sc;
+    
+    boolean rezultat = false;
     public String getPoruka() {
         return poruka;
     }
@@ -43,7 +47,7 @@ public class SlanjePoruke {
      * Creates a new instance of SlanjePoruke
      */
     public SlanjePoruke() {
-
+        sc = (ServletContext) FacesContext.getCurrentInstance().getExternalContext().getContext();
     }
     /**
      * Poruka se šalje na unešenu adresu, te ako je uspješno, tada se ispisuje na stranicu
@@ -65,8 +69,19 @@ public class SlanjePoruke {
             message.setSubject(predmet);
             message.setText(sadrzaj);
             Transport.send(message);
-            poruka = "Uspješno slanje emaila";
+            if(predmet.compareToIgnoreCase("NWTiS_poruke")!=0){
+                poruka = "Poruka poslana";
+                return "PoslanaPoruka";
+            }
+            poruka = "Čeka se odgovor!";
+            rezultat = false;
+            do{                          
+                rezultat = (boolean) sc.getAttribute("objavi");
+            }while(!rezultat);
+            poruka = sc.getAttribute("greska").toString();
         } catch (AddressException ex) {
+            
+            poruka = sc.getAttribute("greska").toString();
             poruka = "Neispravna adresa!";
             Logger.getLogger(SlanjePoruke.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MessagingException ex) {
@@ -114,5 +129,11 @@ public class SlanjePoruke {
 
     public void setSadrzaj(String sadrzaj) {
         this.sadrzaj = sadrzaj;
+    }
+    
+    
+    private void pogreškaUBazi(){
+       
+       
     }
 }
